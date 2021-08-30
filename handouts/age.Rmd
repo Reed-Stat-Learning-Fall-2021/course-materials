@@ -1,0 +1,74 @@
+---
+title: "How Old?"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F,
+                      fig.align='center', out.width=300)
+library(knitr)
+```
+ 
+ 
+
+## Photo 1
+
+```{r}
+include_graphics("img/Faculty_Img/img10.jpg")
+```
+
+
+
+## Photo 2
+
+```{r}
+include_graphics("img/Faculty_Img/img3.jpg")
+```
+
+
+
+## Photo 3
+
+```{r}
+include_graphics("img/Faculty_Img/img4.jpg")
+```
+
+
+## Photo 4
+
+```{r}
+include_graphics("img/Faculty_Img/img5.jpg")
+```
+
+
+
+
+## Photo 5
+
+```{r}
+include_graphics("img/Faculty_Img/img6.jpg")
+```
+
+
+
+## Photo 6
+
+```{r}
+include_graphics("img/Faculty_Img/img7.jpg")
+```
+
+## Photo 7
+
+```{r}
+include_graphics("img/Faculty_Img/img8.jpg")
+```
+
+
+## Photo 8
+
+```{r}
+include_graphics("img/Faculty_Img/img1.jpg")
+```
+
+
+

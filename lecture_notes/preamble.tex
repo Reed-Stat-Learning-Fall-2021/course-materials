@@ -1,0 +1,21 @@
+\usetheme{Madrid}
+\useoutertheme{miniframes} % Alternatively: miniframes, infolines, split
+\useinnertheme{circles}
+
+\definecolor{ReedRed}{RGB}{167, 14, 22} %Reed Red (primary)
+%\definecolor{UOGreen}{RGB}{3, 105, 54} % UO Green (primary)
+
+\usecolortheme[named=ReedRed]{structure}
+%\usecolortheme[named=Mahogany]{structure} % Sample dvipsnames color
+
+
+%\usepackage[urw-garamond]{mathdesign}
+%\usepackage[T1]{fontenc}
+
+\makeatletter
+\g@addto@macro\normalsize{%
+    \setlength\belowdisplayskip{-0pt}
+}
+
+\newcommand{\columnsbegin}{\begin{columns}}
+\newcommand{\columnsend}{\end{columns}}

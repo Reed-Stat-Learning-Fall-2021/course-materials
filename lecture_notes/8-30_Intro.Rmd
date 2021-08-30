@@ -1,0 +1,146 @@
+---
+title: "Introduction to Statistical Learning"
+author: "Nate Wells"
+date: "August 30th, 2021"
+institute: "Math 243: Stat Learning"
+fontsize: 9pt
+output: 
+  beamer_presentation:
+    includes:
+      in_header: preamble.tex    
+graphics: yes    
+    
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(ggthemes)
+```
+
+## Outline
+
+In today's class, we will...
+
+\pause
+
+
+- Review course logistics
+
+\pause
+
+- Guess how old the math faculty are
+
+
+# Logistics
+
+## Course Information
+
+- The course website: https://reed-stat-learning-fall-2021.github.io/
+  - Check every day! 
+  - Schedule, list of assignments, resources
+
+\vspace{1 em}  
+- Slack: https://reedmath243fall2021.slack.com
+  - Check every day (or more frequently)!
+  - Announcements, discussion, direct messages
+
+\vspace{1 em}  
+
+- GitHub Classroom: https://classroom.github.com/classrooms/88862064-reed-stat-learning-fall-2021-classroom
+  - Check weekly (or more frequently)
+  - Place to obtain and then submit homework
+
+## For Next Time
+
+- Sign up for our class Slack workspace (if you haven't already)
+
+- Review the [course website](https://reed-stat-learning-fall-2020.github.io/) (Wednesday's schedule will be update later today)
+
+- Sign up for a GitHub account (https://github.com/).
+
+- Bring laptop to class on wednesday 9/2.
+
+# How old are we?
+
+## The Rules
+
+- Photos for 9 math and stats faculty at Reed can be found on the schedule page of the course website, obtained from https://www.reed.edu/faculty-profiles/
+
+- **Goal**: Estimate the age of each faculty member (at the time the picture was taken)
+
+- Work in groups to develop a consistent method for estimating age. Think about:
+  - What explicit features are you analyzing?
+  - How do you convert these features to numeric estimates?
+  - How do you resolve differences in opinion among group members?
+
+- Record your estimates for each faculty member on a piece of paper and submit by the end of class
+
+- **Note: not all pictures were taken in the current year**
+
+## Photo 1
+
+\begin{center}
+\includegraphics[height=.8\textheight]{img/Faculty_Img/img10}
+\end{center} 
+
+
+## Photo 2
+
+\begin{center} 
+\includegraphics[height=.8\textheight]{img/Faculty_Img/img3}
+\end{center} 
+
+## Photo 3
+
+\begin{center} 
+\includegraphics[height=.8\textheight]{img/Faculty_Img/img4}
+\end{center} 
+
+## Photo 4
+
+\begin{center} 
+\includegraphics[height=.8\textheight]{img/Faculty_Img/img5}
+\end{center} 
+
+## Photo 5
+
+\begin{center} 
+\includegraphics[height=.8\textheight]{img/Faculty_Img/img6}
+\end{center} 
+
+## Photo 6
+
+\begin{center} 
+\includegraphics[height=.8\textheight]{img/Faculty_Img/img7}
+\end{center} 
+
+## Photo 7
+
+\begin{center} 
+\includegraphics[height=.8\textheight]{img/Faculty_Img/img8}
+\end{center} 
+
+
+## Photo 8
+
+\begin{center} 
+\includegraphics[height=.8\textheight]{img/Faculty_Img/img1}
+\end{center} 
+
+## Debrief
+
+- How should we quantify error?
+
+- What are some sources for error in our estimates?
+
+- How should we assess the overall accuracy of a group's predictions?
+
+- Did any groups seem to consistently over- or under-estimate ages? By how much?
+
+- Do any faculty member ages seem to consistently be over- or under-estimated?
+
+- Are there any faculty members where the guesses seem to be in a particularly large or small range?
+
+- We used this as a fun activity. But what are some potential problems and limitations of this type of investigation?
