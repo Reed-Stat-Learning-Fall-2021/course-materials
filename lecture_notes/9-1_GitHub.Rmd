@@ -236,11 +236,19 @@ include_graphics("img/git-many1.png")
 
 \pause
 
-- Users can upload/download to GitHub using the web interface
+- Several ways to interact with Github:
 
-\pause
+  \pause
 
-- Or they can interact with GitHub via a client, like RStudio or GitHub Desktop
+  - Upload/download to GitHub using the web interface (not recommended)
+
+  \pause 
+
+  - Issue commands in the shell (powerful, but steep learning curve)
+
+  \pause
+
+  - Use a client, like RStudio or GitHub Desktop (recommended)
 
 ## GitHub Workflow
 
