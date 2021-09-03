@@ -1,5 +1,5 @@
 ---
-title: "An Foundations of Statistical Learning"
+title: "Foundations of Statistical Learning"
 author: "Nate Wells"
 date: "September 3rd, 2021"
 institute: "Math 243: Stat Learning"
@@ -36,130 +36,46 @@ In today's class, we will...
 
 - Analyze data from the `guess my age' activity
 
-# Vectors and Matrices
 
-##  Matrices
-
-
-- An $n \times p$ matrix $\mathbf{X}$ is an array of $np$ numbers, arranged into $n$ rows and $p$ columns.
-
-$$
-\mathbf{X} =  \begin{pmatrix} 1& 2 & 3 & 4 \\
-5 & 6 & 7 & 8 \\
-9 & 10 & 11 & 12 
-\end{pmatrix} \qquad \mathbf{X} \textrm{ is } 3\times 4
-$$
-\pause
-
-- The $(i,j)$-entry of $\mathbf{X}$ is denote $x_{i,j}$ and is the entry in the $i$th row and $j$th column of $\mathbf{X}$
-$$
-x_{1,2} = 2 \qquad x_{2,2} = 6 \qquad x_{3,4} = 12
-$$
-
- \pause
- 
-- For us, rows will index samples or observations (from $1$ to $n$), while columns will index variables (from $1$ to $p$); this is consistent with the tidy dataframe structure
-
-## Vectors and Transposes
-
-- The transpose of a matrix $\mathbf{X}$, denoted $\mathbf{X}^T$, is the matrix obtained switching rows and columns. (That is, the $(i,j)$ entry of $\mathbf{X}^T$ is the $(j,i)$ entry of $\mathbf{X}$)
-
-$$
-\mathbf{X} =  \begin{pmatrix} 1& 2 & 3 & 4 \\
-5 & 6 & 7 & 8 \\
-9 & 10 & 11 & 12 
-\end{pmatrix}
-\qquad 
-\mathbf{X}^T =  \begin{pmatrix} 1 & 5 & 9 \\
-2 & 6 & 10 \\
-3 & 7 & 11 \\
-4 & 8 & 12
-\end{pmatrix}
-$$
-\pause
-
-- An $n$-dimensional vector $\mathbf{v}$ is an ordered list of $n$ numbers. By default, an $n$-dimensional vector is represented as a $n \times 1$ matrix 
-
-$$
-\mathbf{v} = \begin{pmatrix} 1 \\ 2 \\ 3 \\ 4 
-\end{pmatrix}
-$$
-
-\pause
-
-
-
-## Rows and Columns
-- We often are interested in the entries in the $i$th row of $\mathbf{X}$, which we will denote using the vector $x_i$ (recall vectors are by default, column vectors). It is the list of data on the $i$th individual in the sample
-
-$$
-x_i = \begin{pmatrix} x_{i1} \\ x_{i2} \\ \vdots \\ x_{ip}
-\end{pmatrix} \qquad x_i^T = \begin{pmatrix} x_{i1} & x_{i2} & \cdots & x_{ip}
-\end{pmatrix}  \qquad \mathbf{X} = \begin{pmatrix} x_1^T \\ x_2^2 \\ \vdots \\ x_n^T  \end{pmatrix}
-$$
-  
-
-\pause
-
-- In other situations, we consider the $j$th column of a matrix, denoted $\mathbf{x}_j$. It is the list of values for $j$th variable in the sample
-
-$$
-\mathbf{x}_i = \begin{pmatrix}x_{1j} \\ x_{2j} \\ \vdots \\ x_{nj} \end{pmatrix} \qquad \mathbf{X} = \begin{pmatrix} \mathbf{x}_1 & \mathbf{x}_2 & \cdots & \mathbf{x}_p \end{pmatrix}
-$$
-
-## Summary
-
--  Vectors of length $n$ (corresponding to the sample size) will be denoted using lower case bold letters: $\mathbf{x}$, $\mathbf{y}$, $\mathbf{x}_1$.
-
-\pause
-
-- Vectors of length $p$ (corresponding to the number of predictor variables) will be denoted using lower case normal font letters: $x$, $y$, $x_1$.
-
-\pause
-
-- Individual numbers will also be denoted using lower case normal font letters (but usually with two subscripts): $x_{ij}$.
-
-\pause
-
-- Matrices will be denoted using capital bold letters: $\mathbf{X}$, $\mathbf{A}$
-
-\pause
-
-- We will use capital normal font letters to denote variables. $X$ is usually used for predictor variables, and $Y$ is used for response variables
-
-# What is Stat Learning
+# What is Stat Learning?
 
 ## The Setting
  
-- Fundamentally, stat learning is the study of the relationships between predictor variables $X_1, \dots , X_p$ and zero, one, or more response variables $Y, Y_1, \dots$. 
+- Fundamentally, stat learning is the study of the relationships between predictor variables $X_1, \dots , X_p$ for a population, and one or more response variables $Y_1, Y_2, \dots$.
+
+  \pause
+  
+  - Sometimes, we'll study the relationship among predictor variables in isolation (no response)
+  
+\pause
+
+- In the simplest case, we observe the values of one quantitative response $Y$, as well as $p$ many predictors $X_1, \dots, X_p$.
 
 \pause
 
-- In the simplest case, we observe the values of a quantitative response $Y$, as well as $p$ many predictors $X_1, \dots, X_p$.
-
-\pause
-
-- We assume there is a relationship between these observed values:
+- We assume there is a (usually unknown) relationship between these observed values:
 
 $$
 Y = f(X_1, \dots, X_p) + \epsilon
 $$
 
+  \pause
+
+  - Here, $\epsilon$ denotes a random or unobserved error term **independent** of $X_1, \dots, X_p$
+
 \pause
 
-- Here, $\epsilon$ represents a random or unobserved error term
-
-\pause
-
-The overarching goal of stat learning is to estimate $f$, given data on $X$ and $Y$.
+- The overarching goal of stat learning is to estimate $f$, given data on $X$ and $Y$.
 
 
 ## An Example
 
+Consider the following observations for variables $X$ and $Y$
+
 ```{r echo = F}
 X = runif(100, 0,1 )
 E = rnorm(100, 0, .25)
-Y = 2*X + E
+Y = 2*X + 1 + E
 
 df<-data.frame(X,Y)
 ```
@@ -168,36 +84,52 @@ df<-data.frame(X,Y)
 df %>% ggplot(aes(x = X, y = Y)) + geom_point()
 ```
 
+What is the relationship between $X$ and $Y$?
 \pause
 \small 
 ```{r eval = F, echo = T}
 X = runif(100, 0,1 )
 E = rnorm(100, 0, .25)
-Y = 2*X + E
-
-df<-data.frame(X,Y)
+Y = 2*X + 1 +  E
 ```
 
 
 ## Estimating $f$ for Prediction
 
 
-
 Prediction is useful in settings where $X$ can be observed, but $Y$ cannot. Ex: 
-\vspace{1 em}
 
-\begin{quotation} Suppose for each Reed faculty, we have year undergrad degree was awarded $X$ and want to predict age $Y$.
-
-We wish to create a model $f$ that takes in $X$ as input and outputs our best guess $\hat{Y}$ for $Y$.
-\end{quotation}
+- Suppose for each Reed faculty, we know the number of years $X$ between when their undergrad degree was awarded and when their faculty picture was taken.
 
 \pause
 
-- Note that even if we have a perfect estimate for $f$ in $Y = f(X) + \epsilon$, the predicted value $\hat{Y} = f(X)$ of $Y$ may not equal $Y$, since $Y$ also depends on $\epsilon$
+- Ultimately, we want to estimate the age $Y$ of each faculty member.
 
 \pause
 
-- Thus, there are two sources of error in our model:
+- To do so, we theorize a model that takes in $X$ as input and outputs our best guess $\hat{Y}$ for $Y$.
+
+
+  \pause
+  
+  - What is one such possible model $f$?
+  
+\pause
+
+- But even if we have a perfect estimate for $f$ in $Y = f(X) + \epsilon$, the predicted value $\hat{Y} = f(X)$ of $Y$ may not equal $Y$, since $Y$ also depends on $\epsilon$.
+
+  \pause
+  
+  - What is one source of error $\epsilon$ in the previous model?
+
+## Types of Error
+
+In general, there are two sources of error in a model $\hat{Y} = \hat{f}(X_1, \dots , X_p)+\epsilon$ for the relationship
+$$
+Y = f(X_1, \dots, X_p)+\epsilon
+$$
+
+\pause
 
 1. Reducible error, in the form of our estimate $\hat{f}$ for $f$.
 
@@ -207,23 +139,27 @@ We wish to create a model $f$ that takes in $X$ as input and outputs our best gu
 
 \pause
 
-We study techniques to minimize error of the first type
+What steps can be taken to improve reducible error?
+
+\pause
+
+What about irreducible error?
 
 ## Inference
 
-In other settings, we are more interested in the relationship between each predictor $X_1, \dots, X_p$ and the response.
+In many settings, we are interested in the relationship between each predictor $X_1, \dots, X_p$ and the response $Y$.
 
 \pause
 
-1. Which predictors are likely associated with response?
+1. Which predictors are likely to be associated with response?
 
 \pause
 
-2. What is the degree and strength of the relationship between signficant predictors and the response?
+2. What is the degree and strength of the relationship between significant predictors and the response?
 
 \pause
 
-3. What type of relationship exists between the predictors and the response? (Linear? Logistic? Something more complicated?)
+3. What type of relationship exists between the predictors and the response? (Linear? Exponential? Something more complicated?)
 
 \pause
 
@@ -247,10 +183,10 @@ Parametric methods for estimating $f$ involve two steps:
 \pause
 
 - The linear model is a common choice for the shape of $f$:
-
-$$
-f(X) = \beta_0 + \beta_1 X_1 + \cdots + \beta_p X_p
-$$
+\begin{align*}
+f(X) =& \beta_0 + \beta_1 X_1 \quad \textrm{simple linear}\\
+f(X) =& \beta_0 + \beta_1 X_1 + \dots + \beta_p X_p \quad \textrm{multilinear}
+\end{align*}
 
 \pause
 
@@ -260,38 +196,53 @@ $$
 
 - In the case of the linear model, we estimate the values of $\beta_0, \dots, \beta_p$ using the *method of least squares*.
 
+
+$$
+\hat\beta_1 = \frac{\sum(x_i - \bar x)(y_i - \bar y)}{\sum (x_i - \bar x)^2} \qquad \hat \beta_0 = \bar y - \hat \beta_1 \bar x
+$$
+
 ## Non-parametric Methods
 
-Non-parametric methods forgo assumptions on the shape of $f$, working instead in a very general class of functions
+Non-parametric methods forgo assumptions on the shape of $f$, working instead in a very general class of functions.
 
 \pause
 
-- In doing so, non-parametric models avoid the problem of mis-characterizing the relationship between predictors and response
+- In doing so, non-parametric models avoid the problem of mischaracterizing the relationship between predictors and response
 
 \pause
 
 - However, non-parametric models run the risk of **overfitting**, where the model closely matches the observed data, but does not represent the true unobserved relationship between the variables 
 
+  \pause
+  
+  - How is this possible?
+  
+
 \pause
 
-- Non-parametric models often require orders of magnitute more data to make accurate predictions, compared to parametric models
+- Non-parametric models often require orders of magnitude more data to make accurate predictions, compared to parametric models
 
 \pause
 
 - Some examples of non-parametric models include: Spline Regression, Support Vector Machines, and Neural Networks
 
-## Problem Types
+## Techniques and Problems
 
 Most statistical learning **techniques** fall into one of two categories:
 
 \pause
 
-1. Supervised learning, in which predictors are compared with one or more response variables
-
-\pause
-
-2. Unsupervised learning, in which patterns and trends are detected in the predictors without reference to a response variable
-
+\begin{enumerate}
+\item Supervised learning, in which predictors are compared with one or more response variables. 
+\begin{itemize} \small
+\item Because we have both predicted and actual values of response, we can assess the accuracy of the model.
+\end{itemize} \normalsize
+\item Unsupervised learning, in which patterns and trends are detected in the predictors without reference to a response variable.
+\begin{itemize}\small
+\item There is no available metric to determine when the model is performing "well"
+\end{itemize}
+\end{enumerate}
+\normalsize
 \pause
 
 Statistical learning **problems** also fall into a pair of categories:
@@ -304,16 +255,62 @@ Statistical learning **problems** also fall into a pair of categories:
 
 2. Classification problems, wherein we sort a **qualitative** response variable into several discrete classes.
 
-# Guess My Age
+
+
+
+
+# How Old?
  
-## The Task
+## Reflection
+
+**The task:** Consider photos for 8 math and stats faculty at Reed. Estimate the age of each faculty member (at the time photo was taken).
+
+```{r fig.show = 'hold', fig.align = 'center', echo = F, out.width = "10%"}
+include_graphics("img/Faculty_Img/img10.jpg")
+include_graphics("img/Faculty_Img/img3.jpg")
+include_graphics("img/Faculty_Img/img4.jpg")
+include_graphics("img/Faculty_Img/img5.jpg")
+include_graphics("img/Faculty_Img/img6.jpg")
+include_graphics("img/Faculty_Img/img7.jpg")
+include_graphics("img/Faculty_Img/img8.jpg")
+include_graphics("img/Faculty_Img/img1.jpg")
+```
+
  
-1. Open a new .Rmd file in RStudio and import the data set from Monday's class, available on the course webpage:
 
-[https://reed-stat-learning-fall-2020.github.io/data/how_old.csv](https://reed-stat-learning-fall-2020.github.io/data/how_old.csv)
 
-2. Explore the data using ggplot
+\pause
 
-3. Mutate the data set using `dplyr` verbs to assess each groups accuracy. Which group seemed to have the most accurate predictions?
+- Was the *How Old?* activity supervised or unsupervised?
 
-4. Which faculty member's age predictions seemed to be the most (and least) variables?
+\pause
+
+- Did it represent a classification or regression problem?
+
+\pause
+
+- Were you interested primarily in prediction or inference?
+
+\pause
+
+- Did you use parametric or non-parametric methods?
+
+## The Results
+
+```{r out.width = "80%", fig.align='center'}
+include_graphics("img/age_color.png")
+```
+
+## Debrief
+
+- How should we quantify error?
+
+- What are some sources for error in our estimates?
+
+- How should we assess the overall accuracy of a group's predictions?
+
+- Did any groups seem to consistently over- or under-estimate ages? By how much?
+
+- Do any faculty member ages seem to consistently be over- or under-estimated?
+
+- Are there any faculty members where the guesses seem to be in a particularly large or small range?
