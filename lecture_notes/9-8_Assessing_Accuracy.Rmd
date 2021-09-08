@@ -300,9 +300,7 @@ But no guarantee that model which minimizes $\mathrm{MSE}$ on training data will
 
 In fact, when selecting a complex model that minimizes $\mathrm{MSE}$ on the training data, the test $\mathrm{MSE}$ will often be very large!
 
-## Demo in RStudio
 
-See .Rmd file (Wednesday 9-9 Demo) on the schedule page of the course website
 
 
 # Bias-Variance Trade-off
