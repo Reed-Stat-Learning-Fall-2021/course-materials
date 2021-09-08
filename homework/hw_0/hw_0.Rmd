@@ -1,0 +1,24 @@
+---
+title: "hw_0"
+author: ""
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+**Instructions**
+
+1. Add your name between the quotations marks on the author line in the YAML above.
+
+2. Retype the following sentence in between the bars of red stars below:
+
+> I promise to commit early and often. In fact, I made a commit just now!
+
+***********************************
+
+
+***********************************
+
+3. Submit your assignment by pushing all of your commits to your repo on GitHub
