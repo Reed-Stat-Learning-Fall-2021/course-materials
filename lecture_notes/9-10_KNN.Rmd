@@ -121,8 +121,8 @@ $$
 
 ## Plot 1
 
-```{r cache=T}
-set.seed(1)
+```{r cache = T}
+set.seed(10)
 n<-200
 x1<-runif(n, 0,1 )
 x2<-runif(n, 0,1)
@@ -134,20 +134,17 @@ for (i in 1:n){
 d<-data.frame(x1,x2,Y)
 
 
-ggplot(d, aes(x = x1, y =x2, color = Y))+geom_point()
+ggplot(d, aes(x = x1, y =x2, color = Y))+geom_point()+coord_fixed()+theme_bw()
 ```
 
 ## Plot 2
 
 ```{r cache=T}
-set.seed(1)
- 
-
 X<-seq(0,1,length.out = 200)
 Z<-sqrt(1 - X^2)
 d2<-data.frame(X,Z)
   
-ggplot()+geom_point(data = d, aes(x = x1, y =x2, color = Y))+geom_line(data = d2, aes(x = X, y = Z), color = "red", size = 1)
+ggplot()+geom_point(data = d, aes(x = x1, y =x2, color = Y))+geom_line(data = d2, aes(x = X, y = Z), color = "purple", size = 1)+coord_fixed()+theme_bw()
 ```
 
 ## Expected Error Rate
@@ -195,23 +192,59 @@ $$
 
 ## Simulation
 
-Classify $x_0$ for a variety of $K$
+Classify $x_0$ for $K = 1, 2, 3, 5, 10, 200$.
 
 ```{r cache =T}
-set.seed(22)
-a<-runif(10, 0, 1)
-b<-runif(10, 0, 1)
-Y<-sample(c("A","B"), replace = T, size = 10)
-d3<-data.frame(a,b,Y)
+ggplot(d, aes(x = x1, y =x2, color = Y))+geom_point()+coord_fixed()+theme_bw()+annotate(geom = "point", x = .4, y = .83, color = "purple", size = 2)
+# + annotate(geom = "text", x = .82, y = .8, label = "x0")+labs(x = "X1", y = "X2" )
 
-ggplot(d3, aes(x = a, y = b, color = Y))+geom_point()+annotate(geom = "point", x = .5, y = .5, color = "purple") + annotate(geom = "text", x = .53, y = .52, label = "x0")+labs(x = "X1", y = "X2" )
+#ggplot(d3, aes(x = a, y = b, color = Y))+geom_point()+annotate(geom = "point", x = .5, y = .5, color = "purple") + annotate(geom = "text", x = .53, y = .52, label = "x0")+labs(x = "X1", y = "X2" )
 ```
 ## Simulation 
 
-Sketch the classification boundaries for $K = 3$. What happens for $K = 1$? As $K$ gets larger?
+Sketch the classification boundaries for a variety of values of $K$.  
 
 ```{r cache=T}
-ggplot(d3, aes(x = a, y = b, color = Y))+geom_point()
+ggplot()+geom_point(data = d, aes(x = x1, y =x2, color = Y))+geom_line(data = d2, aes(x = X, y = Z), color = "purple", size = 1, alpha = .5)+coord_fixed()+theme_bw()
+```
+
+```{r}
+library(class)
+test <- expand.grid(x1 = seq(from = .25, to = 1, length.out = 60), x2 =  seq(from = 0, to = 1, length.out = 60) )
+
+k1 <- data.frame(test,Y = knn(
+ d %>% select(x1,x2), test, d$Y, k =1
+))
+
+k2<- data.frame(test,Y = knn(
+ d %>% select(x1,x2), test, d$Y, k =2
+))
+
+k5<- data.frame(test,Y = knn(
+ d %>% select(x1,x2), test, d$Y, k =5
+))
+
+k10<- data.frame(test,Y = knn(
+ d %>% select(x1,x2), test, d$Y, k =10
+))
+
+k20<- data.frame(test,Y = knn(
+ d %>% select(x1,x2), test, d$Y, k =20
+))
+
+k50<- data.frame(test,Y = knn(
+ d %>% select(x1,x2), test, d$Y, k =50
+))
+```
+
+
+```{r}
+ggplot(k1, aes(x = x1, y = x2, color = Y))+geom_point()+coord_fixed()+theme_bw()
+ggplot(k2, aes(x = x1, y = x2, color = Y))+geom_point()+coord_fixed()+theme_bw()
+ggplot(k5, aes(x = x1, y = x2, color = Y))+geom_point()+coord_fixed()+theme_bw()
+ggplot(k10, aes(x = x1, y = x2, color = Y))+geom_point()+coord_fixed()+theme_bw()
+ggplot(k20, aes(x = x1, y = x2, color = Y))+geom_point()+coord_fixed()+theme_bw()
+ggplot(k50, aes(x = x1, y = x2, color = Y))+geom_point()+coord_fixed()+theme_bw()
 ```
 
 ## Error Rates
