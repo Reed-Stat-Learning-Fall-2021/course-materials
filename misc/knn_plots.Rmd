@@ -1,0 +1,41 @@
+---
+title: "KNN"
+author: "Nate Wells"
+date: "9/9/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(class)
+```
+
+```{r}
+set.seed(121)
+x<-runif(11, 0, 1)
+y<-runif(11, 0, 1)
+C<-sample(c("A","B"), replace = T, size = 11)
+d3<-data.frame(x,y,C)
+```
+
+```{r}
+d4 <- expand.grid(x = seq(from = .25, to = 1, length.out = 60), y =  seq(from = 0, to = 1, length.out = 60) )
+```
+
+
+```{r}
+knn_pred <- knn(
+ d3 %>% select(x,y), d4, d3$C, k =3
+)
+
+decision <- data.frame(d4, knn_pred)
+```
+
+
+```{r}
+ggplot()+geom_point(data = d3, aes(x = x, y = y, color = C))+annotate(geom = "point", x = .5, y = .5, color = "purple") + annotate(geom = "text", x = .53, y = .52, label = "x0")+labs(x = "X1", y = "X2" )+geom_point(data = decision, aes(x = x, y = y, color = knn_pred), size = .2, alpha = .75)+theme_bw()
+```
+
+
+
