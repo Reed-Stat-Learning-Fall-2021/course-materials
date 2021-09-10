@@ -1,0 +1,63 @@
+---
+title: "Classification"
+author: ""
+date: "9/28/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+## Part I
+
+Sketch the classification boundaries.
+
+```{r}
+
+x1<-c(1,2,3,5)
+x2<-c(3,1, 4, 3)
+Y<-c("A", "A", "B", "B")
+d3<-data.frame(x1,x2,Y)
+
+ggplot(d3, aes(x = x1, y = x2, color = Y))+geom_point(size  = 3)+labs(x = "X1", y = "X2" )+theme_bw()+coord_fixed()
+```
+
+
+## Part II
+
+Classify each of the black points. Then view the `test` data frame to determine your error rate.
+
+```{r}
+set.seed(3)
+n<-200
+x1<-runif(n, 0,1 )
+x2<-runif(n, 0,1)
+p<-(x1^2 + x2^2)/2 
+Y<-c()
+for (i in 1:n){
+  Y<-c(Y, sample(c("A","B"), 1, prob = c(p[i], 1 - p[i])))
+}
+d<-data.frame(x1,x2,Y)
+
+
+test_pointsx1<-runif(5, 0 ,1)
+test_pointsx2<-runif(5, 0 ,1)
+test_pointsy<-c()
+ptest<-(test_pointsx1^2 + test_pointsx2^2)/2 
+for (i in 1:5){
+  test_pointsy<-c(test_pointsy, sample(c("A","B"), 1, prob = c(p[i], 1 - p[i])))
+}
+test<-data.frame(test_pointsx1, test_pointsx2, test_pointsy)
+
+
+ggplot()+
+  geom_point(data = d, aes(x = x1, y =x2, color = Y))+
+  geom_point(data = test, aes(x = test_pointsx1, y = test_pointsx2 ))
+```
+```{r}
+View(test)
+```
+
+ 
