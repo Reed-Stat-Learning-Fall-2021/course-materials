@@ -1,0 +1,611 @@
+---
+title: "Simple Linear Regression"
+author: "Nate Wells"
+date: "September 13th, 2021"
+institute: "Math 243: Stat Learning"
+fontsize: 9pt
+output: 
+  beamer_presentation:
+    includes:
+      in_header: preamble.tex    
+graphics: yes    
+    
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, 
+                      fig.align = "center",
+                      message = F, 
+                      warning = F,
+                      fig.width = 6,
+                      fig.height = 4,
+                      out.width = "70%"
+                      )
+library(tidyverse)
+library(knitr)
+library(ggthemes)
+library(moderndive)
+```
+
+## Outline
+
+In today's class, we will...
+
+ 
+- Discuss theoretical foundation for linear regression
+
+
+- Perform inference for simple linear models
+
+ 
+- Implement simple linear regression in R
+
+ 
+
+# Foundations
+ 
+##  Linear Regression
+
+- Suppose we have one or more predictors $(X_1, X_2, \dots , X_p)$ and a *quantitative* response variable $Y$, and that
+$$
+Y = f(X_1, \dots, X_p) + \epsilon
+$$
+
+\pause
+
+- The function $f$ could theoretically take many forms. But the simplest form assumes $f$ is a linear function:
+$$
+f(x_1, x_2, \dots , x_p) = \beta_0 + \beta_1 x_1 + \dots + \beta_p x_p
+$$
+  \pause
+  
+  - Note: a change in $f$ is constant per unit change in any of the inputs.
+  
+\pause
+
+- If $Y$ depends on only 1 predictor $X$, then the linear model reduces to
+$$
+ y = \hat{f}(x) = \beta_0 + \beta_1 x
+$$
+  \pause
+  
+- We'll use **Simple Linear Regression** (SLR) to build intuition about all linear models
+
+
+
+
+## Approximations and Estimates
+
+- In reality, the relationship $f$ between $Y$ and $X_1, \dots, X_p$ may not be linear
+
+\pause
+
+- But many functions can be well-approximated by linear ones (especially when inputs are restricted to a small range)
+
+\pause
+
+- But even if $f$ is truly linear, we still have problems: We do not know the parameters of the linear model.
+
+\pause
+
+- Based on data, we estimate the parameters to create an estimated linear model
+
+$$
+\hat{f} = \hat{\beta}_0 + \hat{\beta}_1 x_1 + \dots + \hat{\beta}_px_p
+$$
+
+\pause
+
+- So we are **estimating** an **approximation** to a relationship between response and predictors. 
+
+## SLR Review
+
+```{r}
+poverty = read.table("data/poverty.txt", header = T, sep = "\t")
+```
+
+Consider the relationship between a state's high school grad rate $Y$ and its poverty rate $X$.
+ 
+\columnsbegin
+\column{.5\textwidth}
+
+\pause
+
+
+```{r fig.align="center", fig.height=4, fig.width= 4, out.width="90%", message = F}
+ggplot(data = poverty, aes(y = Graduates, x = Poverty)) +
+  geom_point(color="darkblue") +
+  geom_point(data= NULL, aes(x = 11.2, y = 86.9), color = "red")+
+    annotate(geom="text", x=12.2, y=86.9, label="OR",
+              color="black", size = 3)+ 
+  labs(title = "State-by-State Graduation and Poverty Rates",
+       y = "High School Graduation Rate, Y",
+       x = "Poverty Rate, X") +
+  theme_tufte()  
+```
+\pause
+
+\column{.5\textwidth}
+
+- Suppose we want to model $Y$ as a function of $X$
+  
+\vspace{1em}
+
+\pause
+
+- Let's assume a linear relationship
+
+$$
+Y = \beta_0 + \beta_1 X + \epsilon
+$$
+\pause
+
+- Model (hand-fitted):$$ \hat{Y} = \hat{\beta}_0 + \hat{\beta}_1 X = 96.2 -0.9 X$$
+
+
+
+\columnsend
+  
+## SLR Review
+
+```{r}
+poverty = read.table("data/poverty.txt", header = T, sep = "\t")
+```
+
+Consider the relationship between a state's high school grad rate $Y$ and its poverty rate $X$.
+ 
+\columnsbegin
+\column{.5\textwidth}
+
+
+
+
+```{r fig.align="center", fig.height=4, fig.width= 4, out.width="90%", message = F}
+ggplot(data = poverty, aes(y = Graduates, x = Poverty)) +
+  geom_point(color="darkblue") +
+  geom_smooth(method = "lm", se = F)+
+  annotate(geom="text", x=12.2, y=86.9, label="OR",
+              color="black", size = 3)+  
+  geom_point(data= NULL, aes(x = 11.2, y = 86.9), color = "red")+
+  labs(title = "State-by-State Graduation and Poverty Rates",
+       y = "High School Graduation Rate, Y",
+       x = "Poverty Rate, X") +
+  theme_tufte()  
+```
+
+
+\column{.5\textwidth}
+
+- Suppose we want to model $Y$ as a function of $X$
+  
+\vspace{1em}
+
+
+
+- Let's assume a linear relationship
+
+$$
+Y = \beta_0 + \beta_1 X + \epsilon
+$$
+
+
+- Model (hand-fitted):$$ \hat{Y} = \hat{\beta}_0 + \hat{\beta}_1 X = 96.2 -0.9 X$$
+
+
+
+\columnsend
+
+## Residuals
+
+```{r include = FALSE}
+library(moderndive)
+score_model <- lm(Graduates ~ Poverty, data = poverty)
+# Get regression table:
+get_regression_table(score_model)
+```
+
+
+```{r}
+povertylm<-poverty %>% 
+  mutate(predicted = predict(score_model), residuals = residuals(score_model))
+```
+
+- **Residuals** are the leftover variation in the data after accounting for model fit.
+
+- Each observation $(x_i, y_i)$ has its own residual $e_i$, which is the difference between the observed ($y_i$) and predicted ($\hat{y}_i$) value:
+$$e_i = y_i - \hat{y}_i$$
+\pause
+```{r fig.align="center", fig.height=4.55, fig.width= 10, out.width="60%"}
+ggplot(data = povertylm, aes(y = Graduates, x = Poverty)) +
+  geom_point(color="darkblue") +
+  geom_smooth(method = "lm", se = FALSE, size = .75 ) +
+  geom_point(aes( y = predicted), shape = 1, alpha = .5 ) +
+  geom_segment(aes(xend = Poverty, yend = predicted), alpha = .75) +
+  labs(title = "State-by-State Graduation and Poverty Rates, with Residual Heights",
+       y = "High School Graduation Rate, Y",
+       x = "Poverty Rate, X") +
+  theme_tufte()  
+```
+\textcolor{white}{Oregon's residual is}
+\textcolor{white}{$$ e = y - \hat{y} = 86.9 - 86.2  =0.7$$}
+
+## Residuals
+
+- **Residuals** are the leftover variation in the data after accounting for model fit.
+
+- Each observation $(x_i, y_i)$ has its own residual $e_i$, which is the difference between the observed ($Y_i$) and predicted ($\hat{y}_i$) value:
+$$e_i = y_i - \hat{y}_i$$
+```{r fig.align="center", fig.height=4.55, fig.width= 10, out.width="60%"}
+ggplot(data = povertylm, aes(y = Graduates, x = Poverty)) +
+  geom_point(color="darkblue") +
+  geom_smooth(method = "lm", se = FALSE, size = .75 ) +
+  geom_point(aes( y = predicted), shape = 1, alpha = .5 ) +
+  geom_segment(aes(xend = Poverty, yend = predicted), alpha = .75) +
+  geom_segment( x = 11.2, xend = 11.2, y = 86.15, yend = 86.9 , alpha = .75, color = "red") +
+ # geom_text(x =17.75, y = 83.5, label = "e = 4.9", size = 8, alpha =.75 ) +
+  annotate(geom="text", x=11.2, y=84, label="e = 0.7",
+              color="black", size = 4) +
+  labs(title = "State-by-State Graduation and Poverty Rates, with Residual Heights",
+       y = "High School Graduation Rate, Y",
+       x = "Poverty Rate, X") +
+  theme_tufte()  
+```
+- Oregon's residual is
+$$ e = y - \hat{y} = 86.9 - 86.2  =0.7$$
+
+## Residual Plot
+
+- To visualize the degree of accuracy of a linear model, we use residual plots:
+
+```{r fig.align="center", fig.height=4.55, fig.width= 10, out.width="60%"}
+
+
+ggplot(data = povertylm, aes(y = residuals, x = Poverty)) +
+  geom_point(color="darkblue") +
+  geom_smooth(method = "lm", se = FALSE, size = .75 ) +
+  geom_segment(aes(xend = Poverty, y = 0, yend = residuals), alpha = .75) +
+  labs(title = "Residual Plot for Graduation and Poverty Rates",
+       y = "Residuals for Graduation Rate",
+       x = "Poverty Rate, X") +
+  theme_tufte()  
+```
+\pause
+
+- Points preserve original $x$-position, but with $y$-position equal to residual.
+
+## Residual Plot
+
+- To visualize the degree of accuracy of a linear model, we use residual plots:
+
+```{r fig.align="center", fig.height=4.55, fig.width= 10, out.width="60%"}
+
+
+ggplot(data = povertylm, aes(y = residuals, x = Poverty)) +
+  geom_point(color="darkblue") +
+  geom_smooth(method = "lm", se = FALSE, size = .75 ) +
+  geom_segment(aes(xend = Poverty, y = 0, yend = residuals), alpha = .75) +
+  geom_segment( x = 11.2, xend = 11.2, y = 0, yend = 0.7 , alpha = .75, color = "red") +
+  annotate(geom="text", x=11.2, y=-1, label="OR",
+              color="black", size = 4) +
+  labs(title = "Residual Plot for Graduation and Poverty Rates",
+       y = "Residuals for Graduation Rate",
+       x = "Poverty Rate, X") +
+  theme_tufte()  
+```
+ 
+- Points preserve original $x$-position, but with $y$-position equal to residual.
+
+## Residual Sum of Squares
+
+- Define the **Residual Sum of Squares** (RSS) as
+$$
+\mathrm{RSS} = \sum_{i=1}^n (y_i - \hat y_i)^2 = e_1^2 + \dots + e_n^2
+$$
+
+  \pause
+
+  - Note that $\mathrm{RSS} = n \cdot \mathrm{MSE}$. 
+
+\pause
+
+- Using calculus or linear algebra, we can show that $\mathrm{RSS}$ is minimized when 
+$$
+\hat{\beta}_1 = \frac{\sum_{i=1}^n (x_i - \bar{x})(y_i - \bar{y})}{\sum_{i=1}^n(x_i - \bar{x})^2} \qquad \hat{\beta}_0 = \bar{y} - \hat{\beta}_1 \bar{x}
+$$
+
+
+
+
+# Inference for Linear Models
+
+## Statistical Inference
+
+- **Goal**: Use *statistics* calculated from data to make estimates about unknown *parameters*
+
+\pause
+
+
+
+- **Parameters**: $\beta_0$, $\beta_1$
+
+\pause
+
+- **Statistics**: $\hat{\beta}_0$, $\hat{\beta}_1$
+
+  
+\pause  
+
+- **Tools**: confidence intervals, hypothesis tests
+
+\pause
+
+- **The Problems**: Our model will change if built using a different random sample. So in addition to estimates, we need to know about variability
+
+
+## The Confidence Interval
+
+- Confidence Intervals give estimates **and** express an amount of uncertainty we have about those estimates
+
+\pause
+
+- A $C$-level confidence interval for a parameter $\theta$ using the statistic $\hat{\theta}$ takes the form
+
+$$
+\hat{\theta} \pm t^*_C \cdot \mathrm{SE}(\hat{\theta})
+$$
+\pause
+
+- The value $t^*_C$ is the $1 - (1-C)/2$ quantile for the sampling distribution of $\hat{\theta}$
+
+  - i.e. if $\hat{\theta}$ is approximately Normally distributed and $C = .95$, then $t^*_C \approx 2$.
+  
+\pause
+
+- The value $\mathrm{SE}(\hat{\theta})$ is the standard error of $\hat{\theta}$, or the standard deviation of the sampling distribution
+
+## Common Regression Assumptions
+ 
+In order to safely use simple linear regression, we require these assumptions:
+
+1. $Y$ is related to $X$ by a simple linear regression model.
+$$
+Y = \beta_0 + \beta_1 X + \epsilon
+$$
+ 
+
+\pause
+
+2. The errors $e_1, e_2, \ldots, e_n$ are independent of one another.
+
+\pause
+
+3. The errors have a common variance $\mathrm{Var}(\epsilon) = \sigma^2$.
+
+ \pause
+
+4. The errors are normally distributed: $\epsilon \sim N(0, \sigma^2)$
+
+\pause
+
+If one or more of these conditions do not hold, our predictions may not be accurate and we should be skeptical of inferential claims.
+ 
+## The Sampling Distribution of $\hat{\beta}_1$
+
+Assume the following true model:
+$$
+f(x) = 12 + .7  x; \epsilon \sim N(0, 4)
+$$
+\pause
+\vspace{-1em}
+```{r }
+set.seed(145)
+n <- 60
+beta_0 <- 12
+beta_1 <- .7
+sigma <- 2
+x <- rnorm(n, mean = 20, sd = 3)
+f_mean <- beta_0 + beta_1*x
+y <- f_mean + rnorm(n, mean = 0, sd = sigma)
+
+my_data <- data.frame(x,y)
+
+ggplot(my_data, aes(x = x, y = y))+geom_abline(slope = beta_1, intercept = 12)+
+  geom_point(color = "steelblue")+
+  theme_bw()+
+  annotate("text", x = 26, y = 29, label = "f(x)", color = "goldenrod",parse = T)+
+  geom_abline(slope = beta_1, intercept = 12,color = "goldenrod", size = 1)+
+  labs(title = "Simulated Data from true model")
+```
+
+
+ 
+ 
+## The Sampling Distribution of $\hat{\beta}_1$
+
+Assume the following true model:
+$$
+f(x) = 12 + .7  x; \epsilon \sim N(0, 4)
+$$
+\vspace{-1em}
+```{r}
+ggplot(my_data, aes(x = x, y = y))+
+  geom_abline(slope = beta_1, intercept = 12,color = "goldenrod", size = 1)+
+  geom_point(color = "steelblue")+
+  annotate("text", x = 26, y = 29, label = "f(x)", color = "goldenrod",parse = T)+
+  annotate("text", x = 26, y = 32.5, label = "hat(f)(x)", color = "black", parse = T)+
+  geom_smooth(method = "lm", se = F, color = "black")+
+  theme_bw()+
+  labs(title = "Estimate for f based on 1 simulation")
+```
+
+ 
+
+\vspace{-2em}
+ 
+
+## The Sampling Distribution of $\hat{\beta}_1$
+
+Assume the following true model:
+$$
+f(x) = 12 + .7  x; \epsilon \sim N(0, 4)
+$$
+\vspace{-1em}
+```{r cache=TRUE}
+set.seed(1020)
+it <- 1000
+slope <- rep(NA, times = it)
+intercept <- rep(NA, times = it)
+for(i in 1:it) {
+  x <- rnorm(n, mean = 20, sd = 3)
+  f_mean <- beta_0 + beta_1 * x
+  y <- f_mean + rnorm(n, mean = 0, sd = sigma)
+  slope[i] <- lm(y ~ x)$coef[[2]]
+  intercept[i] <- lm(y ~ x)$coef[[1]]
+}
+many_mods <- data.frame(slope, intercept)
+```
+
+
+```{r }
+ggplot(my_data, aes(x = x, y = y))+
+  geom_point(color = "steelblue")+
+  geom_abline(data = many_mods, slope = slope, intercept = intercept, alpha = .02)+
+  geom_smooth(method = "lm", se = F, color = "black")+
+  geom_abline(slope = beta_1, intercept = 12,color = "goldenrod", size = 1)+
+  theme_bw()+
+  labs(title = "Estimates for f based on 1000 simulations")
+```
+
+
+## The Sampling Distribution of $\hat{\beta}_1$
+
+```{r, echo=FALSE}
+
+ggplot(many_mods, aes(x = slope))+geom_histogram(binwidth = 0.04, fill = "steelblue", color ="white")+theme_bw()+
+  labs(x = expression(hat(beta)[1]),
+       title =expression(paste("Sampling distribution of ", hat(beta)[1])))
+```
+
+ 
+
+## The Sampling Distribution of $\hat{\beta}_1$
+
+```{r, echo=FALSE}
+ggplot(many_mods, aes(x = slope ))+geom_histogram(binwidth = 0.04, fill = "steelblue", color ="white")+theme_bw()+
+  geom_vline(xintercept = 0.7, color = "goldenrod", size = 2)+
+  labs(x = expression(hat(beta)[1]),
+       title =expression(paste("Sampling distribution of ", hat(beta)[1])))
+```
+
+ 
+
+## The Sampling Distribution of $\hat{\beta}_1$
+
+```{r, echo=FALSE}
+t <- seq(from = .4, to = 1, length.out = 100)
+z <- 1000*.04*dnorm(t, mean =beta_1 , sd = sqrt(sigma^2/sum((x-mean(x))^2)))
+my_norm<-data.frame(t,z)
+
+ggplot(many_mods, aes(x = slope ))+geom_histogram(binwidth = 0.04, fill = "steelblue", color ="white")+theme_bw()+
+  geom_vline(xintercept = 0.7, color = "goldenrod", size = 2)+
+  geom_line(data = my_norm, aes(x = t, y = z), size = 1)+
+  labs(x = expression(hat(beta)[1]),
+       title =expression(paste("Sampling distribution of ", hat(beta)[1])))
+
+```
+
+ 
+
+## The Sampling Distribution of $\hat{\beta}_1$
+
+The Sampling Distribution has the following characteristics:
+
+1. Centered at $\beta_1$, i.e. $E(\hat{\beta}_1) = \beta$.
+
+\pause
+
+2. $Var(\hat{\beta}_1) = \frac{\sigma^2}{S_{XX}}$.
+    - where $S_{XX} = \sum_{i = 1}^n (x_i - \bar{x})^2$
+    
+\pause 
+
+3. $\hat{\beta}_1 | X \sim N (\beta_1, \frac{\sigma^2}{S_{XX}})$.
+
+
+ 
+
+## Approximating the Sampling Dist. of $\hat{\beta}_1$ 
+
+ 
+
+- Our best estimate of $\beta_1$ is $\hat{\beta}_1$ (since the expected value $\hat \beta_1$ is $\beta_1$)
+
+\pause
+
+- However, since we have to estimate $\sigma$ with $\hat{\sigma}^2 = RSS/n-2$, the distribution of $\frac{\hat{\beta}_1 - \beta_1}{\hat \sigma}$ isn't Normal...
+
+ \pause
+
+  - Instead, it is the $t$-distribution with $n - 2$ degrees of freedom.
+
+\pause
+
+- Our confidence interval for $\hat \beta_1$ is thus
+$$
+\hat{\beta}_1 \pm t_{\alpha/2, n-2} \cdot SE(\hat{\beta}_1) \qquad \textrm{where }SE(\hat{\beta}_1) = \frac{s}{\sqrt{S_{XX}}}
+$$
+
+
+
+
+
+```{r, eval=FALSE, echo = FALSE}
+## Constructing a CI for $\hat{\beta}_1$
+\[ \hat{\beta}_1 \pm t_{\alpha/2, n-2} \cdot SE(\hat{\beta}_1) \]
+beta_1 <- m1$coef[2]
+alpha <- .05
+t_stat <- qt(1-alpha/2, n - 2)
+SE <- summary(m1)$coef[[4]]
+moe <- t_stat * SE
+c(beta_1 - moe, beta_1 + moe)
+confint(m1, "x") # to double check
+```
+
+\pause
+
+**Interpretation** We are *95% confident* that the true slope relating x and y lies between lower and upper bound of this interval.
+ 
+ 
+
+ 
+## Hypothesis test for $\hat{\beta}_1$
+
+Suppose we are interested in testing the claim that the slope is zero.
+
+$$
+H_0: \beta_1^0 = 0 \qquad \textrm{vs} \quad H_A: \beta_1^0 \ne 0
+$$
+
+\pause
+
+ - Consider the statistic $t$ given by
+$$
+t = \frac{\hat{\beta}_1 - \beta_1^0}{SE(\hat{\beta}_1)}
+$$
+
+- Then $t$ will be t-distributed with $n-2$ degrees of freedom and $SE(\hat{\beta}_1)$
+calculated the same as in the CI.
+
+\pause
+
+- The p-value for an observed test statistic $t$ is the probability that a randomly chosen value from the $t$-dist is larger in absolute value than $|t|$.
+
+\pause
+
+- An observed $t$ with p-value less than a desired significance level (often $\alpha = 0.05$) gives good evidence against the null-hypothesis.
+ 
+## Inference for $\hat{\beta}_0$
+
+Often less interesting (but not always!).  You use the t-distribution again but
+with a different $SE$.
