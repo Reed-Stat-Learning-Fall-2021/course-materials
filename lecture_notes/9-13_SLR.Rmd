@@ -135,10 +135,10 @@ ggplot(data = poverty, aes(y = Graduates, x = Poverty)) +
 \pause
 
 - Let's assume a linear relationship
-
 $$
 Y = \beta_0 + \beta_1 X + \epsilon
 $$
+
 \pause
 
 - Model (hand-fitted):$$ \hat{Y} = \hat{\beta}_0 + \hat{\beta}_1 X = 96.2 -0.9 X$$
@@ -184,7 +184,6 @@ ggplot(data = poverty, aes(y = Graduates, x = Poverty)) +
 
 
 - Let's assume a linear relationship
-
 $$
 Y = \beta_0 + \beta_1 X + \epsilon
 $$
@@ -214,7 +213,9 @@ povertylm<-poverty %>%
 - **Residuals** are the leftover variation in the data after accounting for model fit.
 
 - Each observation $(x_i, y_i)$ has its own residual $e_i$, which is the difference between the observed ($y_i$) and predicted ($\hat{y}_i$) value:
-$$e_i = y_i - \hat{y}_i$$
+$$
+e_i = y_i - \hat{y}_i
+$$
 \pause
 ```{r fig.align="center", fig.height=4.55, fig.width= 10, out.width="60%"}
 ggplot(data = povertylm, aes(y = Graduates, x = Poverty)) +
@@ -235,7 +236,9 @@ ggplot(data = povertylm, aes(y = Graduates, x = Poverty)) +
 - **Residuals** are the leftover variation in the data after accounting for model fit.
 
 - Each observation $(x_i, y_i)$ has its own residual $e_i$, which is the difference between the observed ($Y_i$) and predicted ($\hat{y}_i$) value:
-$$e_i = y_i - \hat{y}_i$$
+$$
+e_i = y_i - \hat{y}_i
+$$
 ```{r fig.align="center", fig.height=4.55, fig.width= 10, out.width="60%"}
 ggplot(data = povertylm, aes(y = Graduates, x = Poverty)) +
   geom_point(color="darkblue") +
@@ -252,7 +255,9 @@ ggplot(data = povertylm, aes(y = Graduates, x = Poverty)) +
   theme_tufte()  
 ```
 - Oregon's residual is
-$$ e = y - \hat{y} = 86.9 - 86.2  =0.7$$
+$$
+e = y - \hat{y} = 86.9 - 86.2  =0.7
+$$
 
 ## Residual Plot
 
@@ -441,7 +446,7 @@ ggplot(my_data, aes(x = x, y = y))+
 
  
 
-\vspace{-2em}
+
  
 
 ## The Sampling Distribution of $\hat{\beta}_1$
@@ -450,7 +455,7 @@ Assume the following true model:
 $$
 f(x) = 12 + .7  x; \epsilon \sim N(0, 4)
 $$
-\vspace{-1em}
+
 ```{r cache=TRUE}
 set.seed(1020)
 it <- 1000
@@ -466,7 +471,7 @@ for(i in 1:it) {
 many_mods <- data.frame(slope, intercept)
 ```
 
-
+\vspace{-1em}
 ```{r }
 ggplot(my_data, aes(x = x, y = y))+
   geom_point(color = "steelblue")+
