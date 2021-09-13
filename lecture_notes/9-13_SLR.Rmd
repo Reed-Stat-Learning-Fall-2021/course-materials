@@ -543,7 +543,7 @@ The Sampling Distribution has the following characteristics:
 
 \pause
 
-- However, since we have to estimate $\sigma$ with $\hat{\sigma}^2 = RSS/n-2$, the distribution of $\frac{\hat{\beta}_1 - \beta_1}{\hat \sigma}$ isn't Normal...
+- However, since we have to estimate $\sigma$ with the Residual Standard Error $\hat{\sigma}  = \textrm{RSE} = \sqrt{\textrm{RSS}/n-2}$, the distribution of $\frac{\hat{\beta}_1 - \beta_1}{\hat \sigma}$ isn't Normal...
 
  \pause
 
@@ -591,7 +591,7 @@ $$
 
  - Consider the statistic $t$ given by
 $$
-t = \frac{\hat{\beta}_1 - \beta_1^0}{SE(\hat{\beta}_1)}
+t = \frac{\hat{\beta}_1}{SE(\hat{\beta}_1)}
 $$
 
 - Then $t$ will be t-distributed with $n-2$ degrees of freedom and $SE(\hat{\beta}_1)$
@@ -605,7 +605,31 @@ calculated the same as in the CI.
 
 - An observed $t$ with p-value less than a desired significance level (often $\alpha = 0.05$) gives good evidence against the null-hypothesis.
  
-## Inference for $\hat{\beta}_0$
+## Inference for other parameters in the linear model
 
-Often less interesting (but not always!).  You use the t-distribution again but
-with a different $SE$.
+- We can also perform inference for $\beta_0$, although it is often less interesting in practice (why?)
+
+  \pause
+
+  - We proceed as before, using a $t$ distribution to estimate the sampling distribution of $\hat \beta_0$.
+  
+  - However, the SE of $\hat \beta_0$ is 
+$$
+  SE(\hat \beta_0) = \sigma^2 \left[\frac{1}{n} + \frac{\bar x}{S_{XX}} \right]
+$$
+
+\pause
+
+- Inference is even possible for combinations of $\beta_0$ and $\beta_1$ (i.e $\beta_0 + \beta_1 x$ for any fixed value of $x$)
+
+  \pause
+  
+  - Why might we want to obtain a confidence interval for $\beta_0 + \beta_1 x$?
+  
+  \pause
+  
+  - The associated statistic is again $t$-distributed, although with more complicated SE. 
+  
+  \pause
+  
+  - For details, see DeGroot and Schervish "Probability and Statistics" (or take Math 392)
