@@ -1,0 +1,210 @@
+---
+title: "Homework 2"
+author: ""
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+# Instructions
+
+**Due: 5:00pm on Wednesday, September 22nd**
+
+1. Add your name between the quotation marks on the author line in the YAML above.
+
+2. Compose your answer to each problem between the bars of red stars.
+
+3. Commit your changes frequently.
+
+4. Be sure to knit your .Rmd to a .pdf file.
+
+5. Push both the .pdf and the .Rmd file to your repo on the class organization before the deadline.
+
+# Theory
+
+
+## Problem 1
+*Based on ISLR Exercise 3.1*
+
+Write out the null hypotheses to which the p-values given in Table 3.4 (p. 75 ISLR) correspond. Explain what conclusions you can draw based on these particular p-values.
+
+********************************************
+
+
+
+********************************************
+
+
+ 
+
+## Problem 2
+*Based on ISLR Exercises 3.5 and 3.6*
+
+
+
+(a) Consider the fitted values that result from performing linear regression without an intercept. In this setting, the $i$th fitted value takes the form 
+$$
+\hat{y}_i = x_i \hat{\beta}
+$$
+where
+$$
+\hat{\beta} = \left( \sum_{i=1}^n x_i y_i \right)/ \left( \sum_{j=1}^n x_j^2\right)
+$$
+Show that we can write 
+$$
+\hat{y}_i = \sum_{j =1}^n a_j y_j
+$$
+for some constants $a_j$ (that might depend on the $x_1, \dots, x_n$, but that do not depend on any of $y_1, \dots, y_n$.) Give the explicit formula for $a_j$.
+
+(b) Use equation 3.4 in the text to show that for SLR, the least squares line always passes through the point $(\bar{x}, \bar{y})$
+
+(c) **Optional, does not need to be submitted** Show that the $R^2$ statistic in formula (3.17) is equal to the square of the correlation betwene $X$ and $Y$, as given in formula (3.18). For simplicitly, you may assume that $\bar x = \bar y$ (although the result is true more generally as well).
+
+
+********************************************
+
+
+
+********************************************
+
+# Applied
+
+
+## Problem 3
+
+1000 large seismic events around Fiji have been collected in a data set called `quakes` that is built into R. You can learn more about it with
+the following commands:
+
+```{r echo = F, eval= F}
+#note we set echo=F and eval=F to prevent this chunk from appearing in your knitted .pdf
+data(quakes)
+str(quakes)
+?quakes
+```
+
+#### Earthquake detection
+
+Included in the data set is a column recording the number of stations that detected each earthquake. This refers to a global network of seismographs and it stands to reason that the larger the quake, the more widely it will be detected.
+
+(a) Create a plot of the relationship between `stations` and `magnitude`. How would you characterize the relationship? (If you see overplotting, you may want to add `jitter` to your points or make them transparent by playing with the `alpha` value.)
+
+(b) If there was actually *no relationship* between the two variables, what would you expect the slope of a linear model to be? What about the intercept?
+
+(c) Fit a linear model for `stations` as a function of `mag` and record the regression coefficients. Add the corresponding least squares line to the plot from exercise 1. Interpret your slope and intercept in the context of the problem. 
+
+(d) Using formulas 3.8 and 3.9 on page 66 of ISLR , calculate a 95% confidence interval for the slope of the model that you fit in exercise 3 (you can use R as a calculator to assist with arithmetic). Confirm the calculation by applying the `confint()` function to your linear model.
+
+(e) How many stations do you predict would be able to detect an earthquake of magnitude 7.0?
+
+(f) Parts (a) - (e) in this problem involve elements of *data description*, *inference*, and/or *prediction*. Which was the dominant goal in each question?
+
+********************************************
+
+
+
+********************************************
+
+
+## Problem 4
+
+One good way to assess whether your fitted model seems appropriate is to simulate data from it and see if it looks like the data that you observed. We'll do this for the `mag` and `station` data in the `quakes` data set.
+
+(a) To begin, to generate data similar to `mag`, we will sample with replacement from the existing data (think of this like performing a bootstrap sample). Some observations will likely be selected more than once, These repeated values are standing as approximates for other similar, but unobserved values. Use the `sample()` function in R to create a bootstrap sample from `mag`, and save it as the vector `sim_mag`. 
+
+
+(b) We now need to theorize the functional relationship between `station` and `mag`. Since we fit a linear model previously in Problem (1), we can use that as a starting point. To generate the $\hat{y}$ predicted values from your linear function based on your simulated data in (a), we can define an R function. Replace the line beginning with # in the code chunk below with the formula you found in Problem 1 (i.e. something like `10  - 2x` )
+
+```{r }
+f_hat <- function(x){
+  # your formula for the linear function goes here
+}
+```
+
+(c) Generate your predicted values by applying the `f_hat` function you just made to the vector of predictors `sim_mag` and store the result as the vector `pred_stations`.
+
+(d) Now, we will simulate observed y's by adding random error to each predicted value. Estimate the standard deviation of the error using the observed RSE from your model in Problem 3 and store this value as the variable `obs_rse`. 
+
+(e) We will assume that errors are Normally distributed with mean of 0 and standard deviation of `obs_rse`. The function `rnorm(n, mean, sd)` generates n observations from a Normal distribution with mean `mean` and standard deviation `sd`. Use this function to generate 1000 indepedendt errors.
+
+(f) Create a vector of simulated observed values by adding together your vector of predicted values and the vector of errors, and save the new vector as `sim_stations`.
+
+(g) Create a data frame of simulated data called `quakes_sim` by applying the `data.frame()` function to the vectors `sim_mag` and `sim_stations`. 
+
+(h) Perform exploratory data analysis on this simulated data set. How does your simulated data compare to the actual observed data? How might you change your simulation to make the data more consistent with the observed data?
+
+
+********************************************
+
+
+
+********************************************
+
+
+## Problem 5 
+
+*Based on ISLR Exercise 3.9*
+
+This question uses the `Auto` data set, loaded from the `ISLR` library, as well as the `ggpairs` function from the `GGally` library. Both libraries are loaded by running the code chunk below.
+
+```{r message = F, warning = F}
+library(ISLR)
+library(GGally)
+```
+
+You can learn more about tbe data set with
+the following commands:
+
+```{r echo = F, eval= F}
+#note we set echo=F and eval=F to prevent this chunk from appearing in your knitted .pdf
+?Auto
+View(Auto)
+```
+
+(a) When the `ggpairs` function is applied to a data frame, it creates a matrix of pairwise scatterplots and correlations for all variables in the data frame (using `ggplot` styling conventions). Use this function to create pairwise scatterplots for all **quantitative** variables in the `Auto` data set. *You may want to adjust the displayed figure dimensions using chunk options (the gear in upper right of chunk)*
+
+(b) Use the `lm` function to fit a MLR model with `mpg` as the response and all other quantitative variables as predictors. Then use the `summary` function to print the results.
+
+(c) Based on your model, does there appear to be a relationship between the predictors and response? Which predictors have statistically significant relationship with the response? What does the coefficient for the `year` variable suggest? Justify your answers.
+
+(d) Create diagnostic plots for the linear regression fit. Comment on any problems you observe. Do the residual plots suggest any unusually large outliers? Do leverage plots suggest any observations with unusually large leverage?
+
+(e) Fit a linear regression model with at least 3 interaction terms of your choice. Do any of these interactions terms appear significant?
+
+(f) Try two different transformations of two different variables. Comment on the effect.
+
+*************************************************
+
+
+
+*************************************************
+
+## Problem 6
+
+*Based on ISLR Exercise 3.14*
+
+This problem focuses on the *collinearity* problem.
+
+(a) Run the following code, which randomly generates values for predictors for $X_1$ and $X_2$, and then generates values for a response $Y$ based on a linear model. What are the regression coefficients for this model, as implied by the last line of code?
+
+```{r}
+set.seed(1000)
+n<- 100
+x1 <- runif(n)
+x2 <- 0.5*x1 + rnorm(n, mean = 0, sd = 0.1)
+y  <- 2 + 2*x1+0.3*x2 + rnorm(n, mean = 0, sd = 1 )
+```
+
+(b) What is the correlation between `x1` and `x2`? Create a scatterplot showing this relationship.
+
+(c) Using the simulated data, fit a least squares regression line for $Y$ as a function of $X_1$ and $X_2$. What are the estimates for $\hat \beta_0, \hat \beta_1, \hat \beta_2$? How do these compare to the theoreical regression coefficients?
+
+(d) Based on the regression summary, can you reject the null hypothesis $H_0: \beta_1 = 0$? What about the null hypothsis $H_0: \beta_2 = 0$? Explain.
+
+(e) Now fit a least squares regression for $Y$ as a function of just $X_1$. Based on this model, can you reject the null hypothesis $H_0: \beta_1 = 0$?
+
+(f) Similarly, fit a least squares regression for $Y$ as a function of just $X_2$. Based on this model, can you reject the null hypothesis $H_0: \beta_1 = 0$?
+
+(g) Do the results in parts (d) - (f) contradict each other? Explain.
