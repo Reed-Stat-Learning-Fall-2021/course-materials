@@ -1,0 +1,93 @@
+\documentclass[10pt]{article}
+\usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage{nicefrac}
+\usepackage{amsfonts}
+\usepackage{pgfplots}
+\usepackage{enumerate}
+\usepackage{hyperref}
+\usepackage{stmaryrd}
+
+
+
+%Used for figures
+\usepackage{graphicx}
+%Used for subfigures
+\usepackage{caption}
+\usepackage{subcaption}
+
+\usepackage{tikz}
+
+%Geometry Stuff
+\usepackage[margin = 0.5 in]{geometry}
+\topmargin = -0.4 in
+\textheight = 8.5 in
+\parindent = 0.0in
+
+\pagenumbering{gobble}
+
+%Header
+\usepackage{fancyhdr}
+\pagestyle{fancyplain}
+\headsep = 0.5 in
+% Course Number (e.g. Math 112)
+\lhead{Math 243}
+% Topic (e.g. 7.1 Introduction to Periodic Functions)
+\chead{\LARGE{Stat Learning}  \\  \normalsize }
+% Term (e.g. Winter 2015)
+\rhead{Grading Rubric}
+
+%Thm/Def/Ex Setup
+\usepackage{amsthm}
+\newtheoremstyle{example}{}{}{}{}{\bfseries}{}{5pt}{\underline{\thmname{#1}\thmnumber{ #2:}}}
+\newtheoremstyle{definition}{}{}{}{}{\bfseries}{}{11pt}{\underline{\thmname{#1:}}}
+\newtheoremstyle{theorem}{}{}{}{}{\bfseries}{}{4pt}{\underline{\thmname{#1:}}}
+\theoremstyle{example}
+\newtheorem{example}{Ex}
+\theoremstyle{definition}
+\newtheorem{definition}{Def}
+\theoremstyle{theorem}
+\newtheorem{theorem}{Thm}
+
+\newcommand{\ds}{\displaystyle}
+\newcommand{\nfrac}{\nicefrac}
+
+\newcommand{\degree}{^\circ}
+
+%Document
+\begin{document}
+
+ 
+ 
+\begin{color}{red}
+\subsection*{General Rubric}
+
+Each \textbf{Theory} problem should be graded on a 5-point scale, while each \textbf{Applied} problem should be graded on a 10-point scale. For problems with multiple parts, the score represents a holistic review of the entire problem.
+
+\begin{center}
+\renewcommand*{\arraystretch}{2}
+\begin{tabular}{ p{2cm}|p{8cm} }
+\Large Theory / Applied & \Large Criteria  \normalsize \\ \hline
+5 / 10  & The solution is correct and appropriate and functioning code has been included.  \\ \hline
+4.5 / 9 & The solution is correct except for some minor coding mistake; appropriate and functioning code is included.  \\ \hline
+4 / 8 & The solution is mostly correct, but is missing a small, but essential component; appropriate and functioning code is included. \\ \hline
+3 / 6 & The solution either overlooks a significant component of the problem or makes a significant mistake; some important code is missing or non-functional. Alternatively, in a multi-part problem, a majority of the solutions are correct and include appropriate code, but one part is missing or is significantly incorrect.    \\ \hline
+2 / 4 & The solution overlooks several significant components of the problem or makes several significant mistake; a majority of the problem is incorrect. Essential code is missing or non-functional.  \\ \hline 
+1 / 2 & The solution is rudimentary, but contains some relevant ideas. Alternatively, the solution briefly indicates the correct answer, but provides no further justification.  \\ \hline
+0 & Either the solution is missing entirely, or the author makes no non-trivial progress toward a solution (i.e. just writes the statement of the problem and/or restates given information) \\ \hline \hline
+
+\end{tabular}
+\end{center}
+\end{color}  
+
+\subsection*{Workflow}
+
+It may work best to have both the student's .pdf file and the pull request .Rmd changes page open at the same time. Read/review the .pdf, and add any comments at the appropriate spot on the .Rmd changes page. For each problem, be sure to assign a score out of 5 as one of the comments. Then, print the total score as a general comment on the pull request. \\
+
+If want to run someone's code, it is probably most efficient to clone the student's repo to your RStudio directory and run it there. Hopefully, you won't have to do this for very many students each assignment. But if you are running into this problem often, we can talk about ways to clone many repos at once. 
+
+ 
+ 
+ 
+
+	\end{document}
