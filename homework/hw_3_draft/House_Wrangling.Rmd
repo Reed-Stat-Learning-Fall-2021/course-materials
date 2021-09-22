@@ -1,0 +1,17 @@
+---
+title: "House_Wrangling"
+author: "Nate Wells"
+date: "9/22/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+
+```{r message = F}
+house <- read_csv("house.csv")
+```
+
