@@ -1,0 +1,665 @@
+---
+title: "Multiple Linear Regression: Extensions"
+author: "Nate Wells"
+date: "September 22nd, 2021"
+institute: "Math 243: Stat Learning"
+fontsize: 9pt
+output: 
+  beamer_presentation:
+    includes:
+      in_header: preamble.tex    
+graphics: yes    
+    
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = FALSE,
+	fig.align = "center",
+	message = FALSE,
+	cache = T,
+	fig.width = 6,
+	fig.height = 4,
+	warning = FALSE
+)
+library(tidyverse)
+library(knitr)
+library(ggthemes)
+library(moderndive)
+library(ISLR)
+library(moderndive)
+```
+
+## Outline
+
+In today's class, we will...
+
+
+- Create diagnostic plots for linear models
+
+- Investigation several extensions to the linear model
+  
+
+# Diagnostic Plots
+
+
+## Common Problems
+
+Most problems fall into 1 of 6 categories:
+
+1. Non-linearity of relationship between predictors and response
+
+2. Correlation of error terms
+
+3. Non-constant variance in error
+
+4. Outliers
+
+5. High-leverage points
+
+6. Collinearity of predictors
+
+
+## A Valid Model
+
+Let's begin by creating a valid linear model to use as a baseline:
+$$
+Y = 1 + 2X + \epsilon \qquad \epsilon \sim N(0,0.25)
+$$
+\tiny 
+
+```{r echo = T}
+set.seed(700)
+X <- runif(80, 0, 1)
+e <- rnorm(80, 0, .25)
+Y <- 1 + 2*X + e
+my_data <- data.frame(X,Y)
+```
+
+ 
+
+```{r echo = T, fig.height = 4, fig.width = 6, out.width="50%"}
+ggplot(my_data, aes(x = X , y = Y)) + geom_point()  
+```
+
+## Linear Model
+
+\footnotesize
+
+```{r echo = T}
+my_mod<-lm(Y ~ X, data = my_data)
+my_mod$coefficients
+summary(my_mod)$r.sq
+```
+
+```{r echo = F, fig.height = 4, fig.width = 6, out.width="50%"}
+ggplot(my_data, aes(x = X , y = Y)) + geom_point(col = "steelblue") + geom_smooth(method = "lm", se = F, col ="red") +
+  annotate(geom= "text", x = .25, y = 2.5, label = "y = 1.03 + 1.98X")
+```
+
+## Model Diagnostics
+
+Goal: Create graphics to assess how well data fits modeling assumptions.
+
+\pause
+
+The trade-off: 
+
+- The base R `plot` function can be used to quickly create all diagnostic plots necessary
+  
+  \pause
+  
+  - But we then are restricted to `plot` aesthetics
+  
+  \pause
+  
+- Alternatively, we can use the `gglm` function in the package of the same name, created and maintained by Reed alum, Grayson White.
+
+  \pause
+
+  - Provides the same diagnostic plots as `plot`, but with `ggplot2` appearances and customization.
+
+
+## Residual Plot
+\footnotesize
+
+```{r echo = T, fig.height = 4, fig.width = 6, out.width="50%"}
+library(gglm)
+ggplot(data = my_mod) +stat_fitted_resid()
+```
+\normalsize
+
+ 
+
+What is represented along the horizontal axis? Why?
+\vspace{1 em}
+
+ 
+
+What should we look for?
+
+\vspace{1 em}
+
+## QQ Plot
+
+\footnotesize
+
+```{r echo = T, fig.height = 4, fig.width = 6, out.width="50%"}
+library(gglm)
+ggplot(data = my_mod) +stat_normal_qq()
+```
+
+\normalsize 
+
+What is represented along the horizontal and vertical axes? Why?
+\vspace{1 em}
+
+ 
+
+What should we look for?
+
+\vspace{1 em}
+
+## Scale-Location Plot
+
+\footnotesize
+
+```{r echo = T, fig.height = 4, fig.width = 6, out.width="50%"}
+library(gglm)
+ggplot(data = my_mod) +stat_scale_location()
+```
+
+\normalsize 
+
+What is represented along the vertical axes? Why?
+\vspace{1 em}
+
+ 
+
+What should we look for?
+
+\vspace{1 em}
+
+## Leverage Plot 
+\footnotesize
+
+```{r echo = T, fig.height = 4, fig.width = 6, out.width="50%"}
+library(gglm)
+ggplot(data = my_mod) +stat_resid_leverage()
+```
+
+\normalsize 
+
+What is represented along the horizontal and vertical axes? Why?
+\vspace{1 em}
+
+What should we look for?
+
+\vspace{1 em}
+
+## Plot Quartet
+
+\footnotesize
+
+```{r echo = T, fig.height = 5, fig.width = 6, out.width="65%"}
+library(gglm)
+gglm(my_mod)
+```
+
+
+
+
+# Transformations
+
+
+## Example: Truck Prices
+
+
+Can we use the age of a truck to predict what its price should be?  
+
+- Consider a random sample of 43 pickup trucks between 1994 and 2008.
+
+```{r fig.height = 4, fig.width=6, out.width = "70%" }
+library(tidyverse)
+library(gridExtra)
+pickups <- read.csv("http://andrewpbray.github.io/data/pickup.csv") %>% filter(year >= 1994)
+```
+
+ 
+ 
+```{r echo = FALSE, fig.width = 6, fig.height = 4, out.width="65%"}
+ggplot(pickups, aes(x = year, y = price)) +
+  geom_point(col = "steelblue")
+```
+
+\pause
+
+- Let's fit a linear model
+
+
+## Example: Truck Prices
+
+
+Can we use the age of a truck to predict what its price should be?  
+
+- Consider a random sample of 43 pickup trucks between 1994 and 2008.
+
+ 
+```{r echo = FALSE, fig.width = 6, fig.height = 4, out.width="65%"}
+ggplot(pickups, aes(x = year, y = price)) +
+  geom_point(col = "steelblue")+geom_smooth(method = "lm",se = F, col = "red")
+```
+
+- Let's fit a linear model
+
+
+
+
+## Linear Model
+
+
+
+\footnotesize
+```{r, echo=T}
+truck_mod<-lm(price~year, data = pickups)
+summary(truck_mod)
+```
+
+
+
+## Diagnostics
+
+```{r, echo = FALSE, fig.width = 8, fig.height = 4, out.width="70%"}
+gglm(truck_mod)
+```
+
+
+- Residuals appear normally distributed.
+
+- But data suggests a non-linear relationship
+
+- Two observations appear influential.  
+
+- There is evidence of increasing variance in the residuals.
+
+
+## Transformations
+
+If the diagnostic plots look bad, try to transform variables by applying functions.
+
+\tiny
+
+```{r echo = T}
+pickups <- mutate(pickups, log_price = log(price))
+```
+
+\small
+
+```{r fig.height=2, fig.width=6, out.width="70%"}
+p1 <- ggplot(pickups, aes(x = price)) +
+  geom_histogram(fill = "steelblue",color = "white")  
+
+p2 <- ggplot(pickups, aes(x = log_price)) +
+  geom_histogram(fill = "steelblue", color ="white")  
+
+grid.arrange(p1, p2, ncol = 2)
+```
+
+Variables that span multiple orders of magnitude often benefit from a natural
+log transformation.
+
+$$Y_t = \ln(Y)$$
+
+
+
+
+
+
+## Log-transformed linear model
+
+```{r, fig.width = 6, fig.height = 4, out.width="65%"}
+ggplot(pickups, aes(x = year, y = log_price)) +
+  geom_point(col = "steelblue") +
+  geom_smooth(method = "lm", se = FALSE, col = "red")
+```
+
+\footnotesize 
+```{r echo = T}
+truck_log_mod <- lm(log_price ~ year, data = pickups)
+summary(truck_log_mod)$coef
+```
+
+
+## Poll: Interpretation
+
+The slope coefficient in the log-linear model was $0.13$. Which of the following interpretations are correct? Select all that apply
+
+1. Increasing year by $1$ increases price by approximately $0.13$.
+
+2. Increasing year by $1$ produces a relative increase in price of approximately $e^{.13}$.
+
+3. Increasing year by $1$ increases the log-price by approximately $0.13$.
+
+4. Increasing year by $\ln (1)$ increases price by approximately $0.13$.
+
+## Model Accuracy
+
+The $R^2$ and RSE values for the log and original models
+
+\small
+```{r}
+data.frame(model = c("log", "original")) %>% cbind(
+data.frame(
+r.sq = summary(truck_log_mod)$r.sq,
+rse = summary(truck_log_mod)$sigma) %>% 
+  rbind(data.frame(
+r.sq = summary(truck_mod)$r.sq,
+rse = summary(truck_mod)$sigma)) 
+)
+```
+
+\normalsize
+
+\pause
+
+- The log model has slight improvement in $R^2$. And has massive improvement in RSE...
+
+  \pause
+
+  - Or does it? (Recall that RSE depends on the units of $Y$)
+  
+  \pause
+  
+  - We need to transform predicted values from log model back into original scale
+  
+  \pause
+  
+\small
+
+```{r echo = T}
+pred_price <- exp(truck_log_mod$fitted.values)
+RSS <- sum((pickups$price - pred_price)^2)
+RSE <- sqrt(RSS/(42-2))
+RSE
+```
+
+
+## Diagnostics
+
+```{r, fig.width = 6, fig.height = 4, out.width="60%"}
+gglm(truck_log_mod)
+```
+
+
+- The residuals from this model appear less normal
+
+- But the quadratic trend is now less apparent.
+
+- There are no influential points
+
+- The variance has been stabilized
+ 
+
+## Transformations summary
+
+- If a linear model fit to the raw data leads to questionable residual plots, consider transformations.
+
+  \pause
+
+  - Count data and prices often benefit from transformations.
+
+  \pause
+
+  - The natural log and the square root are the most common, but you can use any 
+transformation you like.
+
+\pause
+
+- Transformations may change model interpretations.
+
+\pause
+
+- Non-constant variance is a serious problem but it can sometimes be solved by transforming the response.
+
+\pause
+
+- Transformations can also fix non-linearity
+
+
+
+
+# Qualitative Predictors
+
+## Qualitative Predictors
+
+Thus far, we have assumed all predictors are quantitative, but it would be nice to include qualitative predictors also
+
+\pause
+
+- For binary categorical variables, we create a new *quantitative* variable by coding the first level as $0$ and the second as $1$. 
+
+\pause
+
+- We extend to variables with more than 2 levels by creating binary variables for all but 1 level.
+
+
+\pause
+
+
+- If $X_1$ is quantitative and $X_2$ is quantitative with 3 levels (A,B,C), the resulting model will be
+$$
+\hat{Y} = f(X_1, X_2) = \beta_0 + \beta_1 X_1 + \beta_2 I_{B} + \beta_3 I_{C}= \begin{cases}  \beta_0   + \beta_1 X_1,& \textrm{ if } X_2 = A,\\ 
+   (\beta_0 + \beta_2)  + \beta_1 X_1,& \textrm{ if } X_2 = B,\\
+   (\beta_0 + \beta_3)  + \beta_1 X_1,& \textrm{ if } X_2 = C,\\ \end{cases}
+$$
+
+
+Note that all 3 regression lines have the same slope, but different intercept.
+
+
+
+## Scatterplot
+
+```{r}
+set.seed(1)
+X1<-runif(50,0,1)
+Y1<-2+2*X1+rnorm(50,0,.25)
+X2<-runif(50,0,1)
+Y2<-3+1*X2+rnorm(50,0,.25)
+X3<-runif(50,0,1)
+Y3<-4+.5*X3+rnorm(50,0,.25)
+
+my_data<-data.frame(X_1=c(X1,X2,X3), Y=c(Y1,Y2,Y3), X_2 = rep(c(0,1,2), each = 50)) %>% mutate(X_2= as.factor(X_2))
+```
+
+```{r}
+my_data1<-filter(my_data, X_2=="0")
+my_data2<-filter(my_data, X_2=="1")
+my_data3<-filter(my_data, X_2=="2")
+
+cat_mod<-lm(data = my_data, Y ~ X_1 + X_2)
+coeffs<-(summary(cat_mod))$coefficients
+
+
+```
+
+```{r fig.height=4, fig.width=6, out.width="70%"}
+ggplot(data = my_data, aes(x = X_1, y = Y, color = X_2) )+geom_point() + geom_parallel_slopes(se= F)
+```
+
+$$
+\hat{Y} = \hat{\beta}_0 + \hat{\beta}_1 X_1 + \hat{\beta}_2 I_1 + \hat \beta_3 I_2 =2.48 + 1.14 X_1 + 0.40 I_1 + 1.20I_2
+$$
+
+## The model in `R`
+
+\footnotesize 
+```{r echo = T}
+cat_mod<- lm(data = my_data, Y ~ X_1 + X_2)
+summary(cat_mod)
+```
+
+## Poll 3: MLR Slope Interpretation
+
+The slope on a (binary) categorical variable $X_2$ tells us (select all that apply)
+
+(a) How much we expect the response to change if we increase the value of $X_2$ from $0$ to $1$, while holding all else constant.
+
+
+(b) The difference in the average response between observations in the two categories.
+
+
+(c) The value of the response variable if $X_2$ equals 0. 
+
+
+(d) The distance between the two regression lines on the 2d scatterplot
+ 
+
+# Non-linearity
+
+## Interaction Effect
+
+- In some cases, the effect of one variable on the response changes depending the values of another variable.
+
+  \pause
+
+  - i.e. the effect of one variable is amplified in the presence of high levels of another variable
+  
+  \pause
+  
+- Consider an investor's annual stock returns. 
+
+  - For fixed annual income, investing larger amounts of money will provide larger returns.
+  
+  - But the size of return per dollar invested **changes** depending on income. Why?
+  
+\pause
+
+- To account for this, we include an **interaction** term in the model:
+
+\pause
+
+\def\arraystretch{1.5}
+\begin{tabular}{cc}
+$Y = \beta_0 + \beta_1 X_2 + \beta_2 X_2 + \epsilon$ & $\textrm{Old model}$ \\
+$Y = \beta_0 + \beta_1 X_2 + \beta_2 X_2 + \beta_3 X_1 X_2 + \epsilon$ &  $\textrm{New model}$ \\
+$Y = \beta_0 + \tilde{\beta}_1 X_1  + \beta_2 X_2 + \epsilon$ & $\tilde{\beta}_1 = \beta_1 + \beta_3 X_2$
+\end{tabular}
+
+
+## Interaction Terms
+
+```{r fig.height=4, fig.width=6, out.width="70%"}
+ggplot(data = my_data, aes(x = X_1, y = Y, color = X_2) )+geom_point() + geom_smooth(method = "lm", se= F)
+```
+\small
+
+\begin{align*}
+\hat{Y} =& \hat{\beta}_0 + \hat{\beta}_1 X_1 + \hat{\beta}_2 I_1 + \hat \beta_3 I_2  + \beta_4 X_1I_1 + \beta_5 X_1I_2 \\
+=& 2.02 + 2.02 X_1 + 0.99 I_1 + 1.95I_2 -1.10X_1I_1 - 1.43 X_1I_2
+\end{align*}
+
+## The model in `R`
+
+\footnotesize 
+```{r echo = T}
+cat_mod<- lm(data = my_data, Y ~ X_1 + X_2 + X_1:X_2)
+summary(cat_mod)
+```
+
+
+
+
+
+
+## Non-linear models
+
+The `emails` data set consists of the `number` of emails I receive in a given `hour` over two days
+
+```{r}
+hour<-0:48
+base<--4*cos(hour*2*pi/24)+5
+number <- base + sample(-1:1, 49, replace = T)
+emails<-data.frame(hour, number)
+```
+
+
+```{r fig.height=4, fig.width=6, out.width="70%"}
+ggplot(emails, aes( x = hour, y = number)) +geom_point()
+```
+
+## Other Non-linear models
+
+The `emails` data set consists of the `number` of emails I receive in a given `hour` over two days
+
+
+
+```{r fig.height=4, fig.width=6, out.width="70%"}
+ggplot(emails, aes( x = hour, y = number)) +geom_point()+geom_smooth(method = "lm", se = F)
+```
+
+## Including non-linear terms
+
+We can theorize a polynomial model for $Y$
+
+$$
+Y = \beta_0 + \beta_1 \cdot X + \beta_2 \cdot X^2 + \cdots + \beta_p \cdot X^p + \epsilon
+$$
+
+\pause
+
+- This model is non-linear in the sense that the regression curve is not a straight line. And that there is non-constant change in $Y$ per unit change in $X$.
+
+\pause
+
+- But it **is** linear in powers of the predictor. 
+
+## Poll: What model?
+
+What polynomial degree seems most appropriate for the given data?
+
+(a) 1
+
+(b) 2
+
+(c) 3
+
+(d) 4
+
+(e) More than 4
+
+```{r fig.height=2, fig.width=6, out.width="50%"}
+ggplot(emails, aes( x = hour, y = number)) +geom_point()
+```
+
+## Plotting non-linear regression curves
+
+```{r echo= T, fig.height=4, fig.width=6, out.width="70%"}
+ggplot(emails, aes( x = hour, y = number)) +geom_point() +
+  geom_smooth(method = "lm", se = F, formula = y ~ poly(x, 4 )) +
+  geom_smooth(method = "lm", se = F, color = "red")
+```
+
+## Plotting non-linear regression curves II
+
+```{r echo= F, fig.height=4, fig.width=6, out.width="70%"}
+ggplot(emails, aes( x = hour, y = number)) +geom_point() +
+  geom_smooth(method = "lm", se = F, formula = y ~ poly(x, 4 )) +
+  geom_smooth(method = "lm", se = F, formula = y ~ poly(x, 2 ), color = "darkgreen") +
+  geom_smooth(method = "lm", se = F, formula = y ~ poly(x, 6), color = "purple") +
+  geom_smooth(method = "lm", se = F, color = "red")
+```
+
+## Modeling with non-linear terms
+
+\tiny 
+```{r echo= T}
+emails_mod<-lm(number ~ poly(hour, degree = 4, raw= T), data = emails)
+summary(emails_mod)
+```
+
+
+
+
+
