@@ -8,10 +8,40 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
+library(rsample)
 ```
 
 
 ```{r message = F}
 house <- read_csv("house.csv")
+```
+
+
+
+
+```{r}
+#remove abnormal data
+house <- house %>% filter(Gr_Liv_Area < 4000 & Sale_Condition=="Normal")
+```
+
+```{r}
+#variable selection
+house <- house %>% select(-Neighborhood, -Sale_Condition )
+```
+
+```{r}
+#test - training split
+set.seed(1001)
+house_initial <- initial_split(data = house, prop = 1/2, strata = Sale_Price, breaks = 5)
+house_train <- training(house_initial)
+house_test <- testing(house_initial)
+```
+
+
+
+
+
+```{r}
+full_mod <- lm(Sale_Price ~ ., data = house)
 ```
 
