@@ -21,27 +21,64 @@ house <- read_csv("house.csv")
 
 ```{r}
 #remove abnormal data
-house <- house %>% filter(Gr_Liv_Area < 4000 & Sale_Condition=="Normal")
+house <- house %>% filter(Gr_Liv_Area < 4000 & 
+                            Sale_Condition=="Normal"&
+                          Electrical != "Unknown" &
+                            Heating_QC != "Poor" &
+                          !(Exterior_1st %in% c("ImStucc", "PreCast","CBlock" ))
+)
 ```
 
 ```{r}
 #variable selection
-house <- house %>% select(-Neighborhood, -Sale_Condition )
+house <- house %>% select(-Neighborhood, -Sale_Condition, -Utilities, -Condition_2, -Roof_Matl, -Heating , -Pool_QC, - Misc_Feature)
 ```
+
+```{r}
+#recode
+#house <- house %>% mutate(
+#  Sale_Type = case_when(Sale_type))
+```
+
+```{r}
+#house %>% select_if(is.character) %>% map(~count(data.frame(x = .x), x))
+```
+
+
+
 
 ```{r}
 #test - training split
 set.seed(1001)
-house_initial <- initial_split(data = house, prop = 1/2, strata = Sale_Price, breaks = 5)
+house_initial <- initial_split(data = house, prop = 3/4, strata = Sale_Price, breaks = 10)
 house_train <- training(house_initial)
 house_test <- testing(house_initial)
 ```
 
+```{r}
+#remove problematic obs
+house_test <- house_test %>% filter(MS_SubClass != "One_and_Half_Story_PUD_All_Ages",
+                                    MS_Zoning != "I_all",
+                                    MS_Zoning != "A_agr",
+                                    Sale_Type != "Oth",
+                                    Sale_Type != "VWD",
+                       )
 
+house_train <- house_train %>% filter(MS_SubClass != "Exterior_2ndPreCast ")
+```
 
 
 
 ```{r}
-full_mod <- lm(Sale_Price ~ ., data = house)
+full_mod <- lm(Sale_Price ~ ., data = house_train)
+```
+
+```{r}
+#predict(full_mod, house_test)
+```
+
+```{r}
+#write_csv(house_test, "house_test.csv")
+#write_csv(house_train, "house_train.csv")
 ```
 
