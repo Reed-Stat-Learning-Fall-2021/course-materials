@@ -1,0 +1,40 @@
+---
+title: "Fuel Economy"
+author: "Wells"
+date: "9/23/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Context
+
+What factors most effect fuel economy for modern vehicles?
+
+The http://fueleconomy.gov website, run by the U.S. Department of Energy's Office of Energy Efficiency and Renewable Energy and the U.S. Environmental Protection Agency, lists different estimates of fuel economy for passenger cars and trucks. 
+
+## Data
+
+The `AppliedPredictiveModeling` package has data fuel economy for 1107 cars from 2010, along with 245 cars from 2011, and 95 from 2012.
+```{r}
+library(AppliedPredictiveModeling)
+data(FuelEconomy)
+```
+
+## Validation Set
+
+
+
+## Exploratory Analysis
+
+
+
+## Model Fitting
+
+
+
+
+## Model Selection
+
