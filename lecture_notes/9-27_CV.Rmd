@@ -43,7 +43,7 @@ In today's class, we will...
 
 - Implement CV in R
   
-# Cross Validation
+# Validation
  
 
 ## Poll: Training Error
@@ -273,7 +273,7 @@ What are some problems with the Training / Validation approach?
 **Cross-Validation** is using resampling techniques to assess model accuracy.
 
 
-# Cross-Validation
+# Resampling
 
 
 ## $k$-fold Cross Validation 
@@ -475,4 +475,40 @@ data.frame(model = c("1", "2"), cv_mse = c(CV_MSE_mod1, CV_MSE_mod2))
 \pause
 \normalsize
 
-- It looks like after performing 10-fold CV, model 2 is better afterall!
+- It looks like after performing 10-fold CV, model 2 is better after all!
+
+## LOOCV
+
+- The special case when $n$ folds are used is called Leave One Out Cross-validation (LOOCV)
+
+  \pause 
+
+  - In this case, the model is fit on all but one observation, and then tested on the lone observation. 
+  
+  \pause
+  
+  - The process is repeated so that every observation is a test point, and the results averaged.
+  
+  \pause
+  
+  - Because every possible model is fit, LOOCV estimates are a deterministic function of training set (unlike other CV)
+  
+\pause
+
+- But LOOCV has significant drawbacks:
+
+  \pause
+  
+  - Because it requires $n$ models, LOOCV is computationally intensive
+  
+  \pause
+  
+  - As any two models fit using LOOCV differ with respect to only two observations, the model estimates for different folds are very highly correlated. 
+  
+  \pause
+  
+  - Because only a single point is used in the test set, MSE estimates are highly variable.
+  
+  \pause
+  
+  - While LOOCV does not consistently have higher variance or lower bias than $k$-fold CV, in almost all cases, it will produce estimates of MSE that are significantly less accurate than other resampling techniques.
