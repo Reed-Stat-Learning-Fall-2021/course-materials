@@ -1,0 +1,333 @@
+---
+title: "The Bootstrap"
+author: "Nate Wells"
+date: "September 27th, 2021"
+institute: "Math 243: Stat Learning"
+fontsize: 9pt
+output: 
+  beamer_presentation:
+    includes:
+      in_header: preamble.tex    
+graphics: yes    
+    
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = FALSE,
+	fig.align = "center",
+	message = FALSE,
+	cache = T,
+	fig.width = 6,
+	fig.height = 4,
+	warning = FALSE,
+	out.width = "70%"
+)
+library(tidyverse)
+library(knitr)
+library(ggthemes)
+library(moderndive)
+library(ISLR)
+library(rsample)
+
+```
+
+## Outline
+
+In today's class, we will...
+
+
+- Discuss the bootstrap for estimating variance of error
+
+- Implement bootstrapping in R
+  
+# The Bootstrap
+
+## Why Bootstrap?
+
+So, you want to know how a particular statistic is distributed?
+
+\pause
+
+  - Suppose you are interested in the distribution of slopes $\hat{\beta}_3$ of the interaction term in an MLR model under random sampling:
+  
+$$
+\hat{y} = \hat{\beta}_0 + \hat{\beta}_1 x + \hat \beta_2 x_2 + \hat \beta_3 x_1x_2
+$$
+
+\pause
+
+- The classic approach:
+  
+  \pause
+  
+  - Write the statistic $\hat{\beta}_3$ as a function of the random observations $x_1, \cdot , x_n$ and use properties of random variables to derive the theoretical distribution. Make some (sometimes unreasable) simplifying assumptions
+  
+  \pause
+  
+  - Look up the theoretical distribution based on someone else's attempt to do part (1).
+  
+  \pause
+  
+  - Hope that the sample size is large enough to allow the Central Limit Theorem to come into play so that the statistic is approximately Normal
+  
+## The Resampling Approach
+
+As an alternative to using the theoretical distribution, use simulation to approximate.
+
+\pause
+
+- The optimistic approach:
+
+  \pause
+  
+  - Generate a large number of samples and compute the statistic of interest on each
+  
+  \pause
+  
+  - Plot and summarize the distribution of the statistic.
+  
+  \pause
+  
+  - The problem?
+
+\pause
+
+- The bootstrap approach:
+
+  \pause
+  
+  - Assume that your sample is large enough to be ``representative'' of your population.
+  
+  \pause
+  
+  - Create a new bootstrap sample by sampling **with replacement** from your original sample, a number of times equal to your original sample size.
+  
+  \pause
+  
+  - Repeat the process to create many bootstrap samples. Compute the statistic of interest on each and plot the results.
+  
+## Bootstrap Demo
+
+Suppose $Y = 1+ 2\cdot X_1 + 3\cdot X_2 + X_1 \cdot X_2 + \epsilon$ with $\epsilon \sim N(0, 0.25)$.
+
+\tiny
+
+```{r echo = T, cache= F}
+set.seed(10101)
+n<-100
+X1<-runif(n, 0, 1)
+X2 <- runif(n, 0, 1)
+e<-rnorm(n, 0 ,.5)
+Y<-1 + 2*X1 + 3*X2 + X1*X2+ e
+d<-data.frame(X1, X2, Y)
+```
+
+```{r out.width="50%"}
+ggplot(d, aes( x = X1, y = Y, color = X2))+geom_point()+
+  theme_bw()+
+  labs(title = "One Sample from True Model")
+```
+
+## Bootstrap Demo
+
+```{r echo = T}
+my_mod<-lm(Y ~ X1*X2, data = d)
+summary(my_mod)$coefficients
+b3 <-  my_mod$coefficients[4]
+```
+
+## The Simulation Approach
+
+\footnotesize
+
+```{r echo = T}
+set.seed(234)
+trials<-1000 #Number of simulations
+n<-100 #Number points in each simulation
+X1<-runif(n, 0, 1) # Generate random X1; same for all sims
+X2 <- runif(n, 0, 1) # Generate random X1; same for all sims
+slopes<-data.frame() #Create empty dataframe for the slopes
+
+for (i in 1:trials){
+sim_e<-rnorm(n, 0 ,.5)
+sim_Y<-1 + 2*X1 + 3*X2 + X1*X2+ sim_e
+sim_d<-data.frame(X1, X2, sim_Y)
+sim_mod<-lm(sim_Y ~ X1*X2, data = sim_d)
+slopes<-rbind( slopes, 
+               data.frame(slope = summary(sim_mod)$coefficients[4,1]))
+}
+```
+
+\footnotesize
+```{r echo = T}
+head(slopes)
+```
+
+## Simulation Distribution
+
+\footnotesize
+```{r echo = F}
+ggplot(slopes, aes(x = slope))+
+  geom_histogram(bins= 25, color = "white")+theme_bw()+
+  labs(title = "Simulated Distribution of Slopes")+
+  geom_vline(xintercept = 1, color = "red", size  =1)+
+  annotate(geom = "text", x = 0.65, y = 100, label = "True Slope", color = "red")
+```
+
+\small
+
+```{r echo = T}
+slopes %>% summarize(mean_slope = mean(slope), sd_slope = sd(slope))
+```
+
+
+## The Bootstrap Approach
+
+We have 1 sample:
+\small
+```{r echo = T}
+head(d)
+```
+\normalsize
+
+But we can create a bootstrap sample:
+
+\small
+
+```{r echo = T}
+set.seed(135)
+a_bootstrap_sample<-slice_sample(d, n = n, replace = T)
+```
+
+\pause
+
+\normalsize
+
+Duplicates?
+
+\small
+```{r echo = T}
+common<-intersect(a_bootstrap_sample, d)
+length(common$X1)
+```
+
+## The Bootstrap Approach, cont'd
+
+Now, we create 1000 bootstraps and calculate the slope of each
+\small
+
+```{r echo = T}
+# Create a function to compute statistic from bootstrap sample
+set.seed(929)
+interaction_slope <- function(split){
+  x <- analysis(split)
+  boot_mod <-lm(Y ~ X1*X2 , data = x)
+  slope <- boot_mod$coefficients[4]
+}
+```
+
+\pause
+
+```{r echo = T}
+# Use rsample to create bootstrap samples and apply function
+library(rsample)
+bt_resamples <- bootstraps(d, times = 1000)
+bt_resamples$slope <- map_dbl(bt_resamples$splits, interaction_slope)
+```
+
+
+## Bootstrap Distribution
+
+\small
+
+```{r }
+bt_resamples %>% 
+ggplot( aes(x = slope))+
+  geom_histogram(bins= 25, color = "white")+theme_bw() +
+  labs(title = "Bootstrap Distribution of Slopes") + 
+  geom_vline(xintercept = b3, color = "blue", size = 1)+
+  geom_vline(xintercept = 1, color = "red", size = 1)+
+  annotate(geom = "text", x = 0.5, y = 90, label = "True Slope", color = "red")+
+  annotate(geom = "text", x = 3.25, y = 90, label = "Sample Slope", color = "blue")
+```
+
+\small
+
+```{r echo = T, eval =F}
+bt_resamples %>% summarize(mean_slope = mean(slope), sd_slope = sd(slope))
+```
+
+```{r echo = F, eval =T}
+bt_resamples %>% as.data.frame() %>%  summarize(mean_slope = mean(slope), sd_slope = sd(slope))
+```
+
+## Side-by-Side Comparison
+
+\columnsbegin
+\column{0.5\textwidth}
+```{r out.width = "100%"}
+ggplot(slopes, aes(x = slope))+
+  geom_histogram(bins= 25, color = "white")+theme_bw()+
+  labs(title = "Simulated Distribution of Slopes")+
+  geom_vline(xintercept = 1, color = "red",size = 1)+
+  annotate(geom = "text", x = 0.65, y = 100, label = "True Slope", color = "red")
+```
+
+\column{0.5\textwidth}
+```{r out.width = "100%"}
+ggplot(bt_resamples, aes(x = slope))+
+  geom_histogram(bins= 25, color = "white")+theme_bw() +
+  labs(title = "Bootstrap Distribution of Slopes")+ 
+  geom_vline(xintercept = b3, color = "blue", size = 1 ) +
+  geom_vline(xintercept = 1, color = "red", size = 1)+
+  annotate(geom = "text", x = 0.5, y = 90, label = "True Slope", color = "red")+
+  annotate(geom = "text", x = 3.25, y = 90, label = "Sample Slope", color = "blue")
+```
+
+\columnsend
+
+\pause
+
+\footnotesize
+
+```{r echo = T}
+rbind(slopes, bt_resamples %>% select(slope)) %>% 
+  cbind(method = rep(c("sim", "boot"), each = 1000)) %>% 
+  group_by(method) %>% summarize(mean_slope = mean(slope), sd_slope = sd(slope), 
+                                 q.025 = quantile(slope,.025), q.975 = quantile(slope, .975))
+```
+
+
+
+## CV verus Bootstrapping
+
+Both are computationally intensive methods that involve sampling from your data set to learn more about your estimate/model.
+
+\pause
+
+**Cross-validation**: Often used for *model assessment* and *model selection*.
+
+  \pause
+
+  - Partition data into test and train
+  
+  - Fit model to train, predict on test
+  
+  - Iterate though all possible *folds* 
+  
+  - Compute aggregate measure of predictive ability
+
+\pause
+
+
+**Bootstrapping**: Often used for *quantifying uncertainty*.
+
+  \pause
+
+  - Draw a bootstrap sample of size $n$ from your data *with replacement*.
+
+  - Compute estimate of interest
+  
+  - Consider distribution of bootstrap estimates over many samples
