@@ -225,6 +225,7 @@ interaction_slope <- function(split){
   x <- analysis(split)
   boot_mod <-lm(Y ~ X1*X2 , data = x)
   slope <- boot_mod$coefficients[4]
+  slope
 }
 ```
 
