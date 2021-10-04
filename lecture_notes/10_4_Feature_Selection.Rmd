@@ -1,0 +1,580 @@
+---
+title: "Feature Selection"
+author: "Nate Wells"
+date: "October 4th, 2021"
+institute: "Math 243: Stat Learning"
+fontsize: 9pt
+output: 
+  beamer_presentation:
+    includes:
+      in_header: preamble.tex    
+graphics: yes    
+    
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = FALSE,
+	fig.align = "center",
+	message = FALSE,
+	cache = F,
+	fig.width = 6,
+	fig.height = 4,
+	warning = FALSE,
+	out.width = "70%"
+)
+library(tidyverse)
+library(knitr)
+library(ggthemes)
+library(ISLR)
+```
+
+## Outline
+
+In today's class, we will...
+
+- Perform some exploratory data analysis on a new data set
+
+- Investigate algorithms for selecting good subsets of predictors
+
+
+# Explaratory Data Analysis
+
+## Molecular Solubility
+
+The `solubility` data set from the `AppliedPredictiveModeling` package contains solubility and chemical structure for a sample of 1,267 different compounds.
+
+\pause
+
+\small
+
+```{r echo = T}
+library(AppliedPredictiveModeling)
+data(solubility)
+```
+
+\pause
+
+\normalsize
+- The solubility of a compound indicates how easily it dissolves in a solvent (often water), and is measured as the amount of solvent required to dissolve 1 part of the compound.
+
+  - The less solvent required, the more soluble the compound.
+
+  - In the dataset, the log solubility is reported, since solubility spans many orders of magnitude
+  
+\pause
+
+- The data also contains 16 chemical count descriptors, such as "number of bonds" or "number of bromine atoms"
+
+\pause
+
+- Finally, the data contains 4 continuous descriptors, such as "molecular weight" or "surface area"
+
+\pause
+
+We are interested in determining solubility based on these 20 chemical descriptors.
+
+
+
+
+## Pre-Processing
+
+- The `solubability` actually consists of 4 data sets: `solTestX`, `solTrainX`, `solTestY`, `solTrainY`
+
+\pause
+
+  - The `X` and `Y` indicate the data is pre-divided into separate sets for predictors and response.
+
+  \pause
+
+  - Additionally, data have already been partitioned into test and training sets (25 / 75) 
+
+\pause
+
+- It will be easier to have predictors and response in the same set, so we'll bind columns together:
+
+\small
+
+```{r echo = T}
+solTest <- data.frame(solTestX, Solubility = solTestY)
+solTrain <- data.frame(solTrainX, Solubility =  solTrainY)
+```
+
+\pause
+
+\normalsize
+
+- The data also contains 218 binary "fingerprints" for each compound indicating presence of particular chemical substructure, each beginning with "FP"
+
+\pause
+
+- We'll ignore these predictors.
+
+\small
+
+```{r echo = T, eval =T}
+solTest <- solTest %>% select(!starts_with("FP"))
+solTrain <- solTrain %>% select(!starts_with("FP"))
+```
+
+## Distribution of Response
+
+We'll take a look just at the training data for now. (Why?)
+
+\pause
+
+```{r eval = T, eval = T}
+solTrain %>% ggplot(aes(x = Solubility))+geom_histogram(color = "white", fill = "steelblue")+labs(title = "Distribution of Solubility")+theme_bw()
+```
+## Pairwise Scatterplots
+
+
+```{r eval = T, eval = T, out.width = "90%"}
+solTrain %>% gather(-Solubility, key = "var", value = "value") %>% ggplot(aes(x = value, y = Solubility ))+geom_point(alpha = .15, shape = 16)+geom_smooth(se = F, color = "maroon", size = .35) + facet_wrap(~var, scales = "free")+theme_bw()
+```
+## Correlation Matrix
+
+\footnotesize
+
+```{r out.width = "80%", echo = T }
+library(GGally)
+ggcorr(solTrain, hjust = 1, size = 2, layout.exp = 5)
+```
+## Collinearity
+
+- What are downsides of fitting the full model?
+
+\pause
+
+- Let's do it anyway!
+
+
+## Model Summary
+
+\tiny
+```{r echo = F}
+sol_mod <- lm(Solubility ~ ., data = solTrain)
+summary(sol_mod)
+```
+## Model Summary
+
+\tiny
+```{r echo = F}
+sol_mod <- lm(Solubility ~ . -NumNonHBonds -NumHydrogen -NumRings, data = solTrain)
+summary(sol_mod)
+```
+## Model Diagnostics
+
+\small
+
+```{r echo = T}
+library(gglm)
+gglm(sol_mod)
+```
+
+
+# Subset Selection
+
+## Methodology
+
+Suppose we wish to find a linear model for $Y$ with $p$ predictors $X_1, \dots, X_p$. How do we determine the optimal collection of predictors?
+
+\pause
+
+- First, determine an appropriate selection criteria.
+
+  \pause
+  
+  - Cross-validation: Computationally expensive, but likely most accurate
+  
+  \pause
+  
+  - Validation set: Subject to variability in test/training split (but ok for large data)
+  
+  \pause
+  
+  - Adjusted $R^2$: Penalizes non-helpful predictors, but may overestimate test error rate.
+  
+  \pause
+  
+  - $C_p$: penalizes training RSS by typical discrepancy between test and training. 
+  $$
+  C_p = \frac{1}{n}(\mathrm{RSS} + 2 d \hat{\sigma}^2)
+  $$
+  
+  \pause
+  
+  - Akaike information criterion (AIC): uses method of maximum likelihood, assuming Normal errors
+  $$
+  \mathrm{AIC} = \frac{1}{n \hat{\sigma}^2}(\mathrm{RSS} + 2 d \hat{\sigma}^2)
+  $$
+  
+  \pause
+
+  - Bayesian information criterion (BIC): uses method of maximum likelihood and Bayes' Rule
+  $$
+  \mathrm{BIC} = \frac{1}{n \hat{\sigma}^2}(\mathrm{RSS} + \ln n d \hat{\sigma}^2)
+  $$  
+  
+## Best Subset
+
+With $p$ predictors, there are a total of $2^p$ possible MLR models.
+
+  - There are $\binom{p}{k}$ models using exactly $k$ of $p$ predictors
+
+\pause
+
+Theoretically, we can find the best model by fitting each possible model and selecting the best via appropriate selection criteria ($C_p$, AIC, BIC, $R^2$, $CV$)
+
+\pause
+
+Downsides?
+
+  \pause
+  
+  - Computation time and storage grows exponentially in $p$
+  
+  \pause
+  
+  - May have low marginal improvement despite number of models fitted
+  
+  \pause
+  
+  - We are performing a large number of *tests*, which corresponds to a relatively flexible model. Likely to overfit.
+
+## Best Subset in R
+
+We use the `regsubsets` function in the `leaps` library.
+
+  \pause
+  
+  - `regsubsets` uses the same syntax as `lm`. The `summary` function outputs the best set of variables for the given number of predictors, across the range supplied
+  
+  \pause
+  
+  - Be default, `regsubsets` only returns up to the best eight models. But `nvmax` can be used to return as many variables as desired
+  
+  \pause
+  
+  - The best model for each number of predictors is determined by $RSS$
+  
+  \pause
+  
+  - The `regsubsets` function returns $RSS$, $R^2$, $C_p$, $AIC$, $BIC$ for the best model of each number of predicts.
+  
+  \pause
+  
+  - The **overall** best model can be selected using any of these criteria.
+  
+\pause
+
+- Why does `regsubsets` only use $RSS$ to determine best model for each number predictors?
+  
+## Using `regsubsets` 
+
+\small
+
+```{r echo = T}
+library(leaps)
+best_subset<-regsubsets(Solubility~.-NumNonHBonds -NumHydrogen -NumRings,
+                        data = solTrain, nvmax = 17)
+```
+
+
+\pause
+
+\normalsize
+
+- The `regsubsets` function itself outputs a special `regsubsets` object, which contains data but is not user-accessible.
+
+\pause
+
+- We'll use the `summary` function, which provides the following elements:
+
+  \pause
+  
+  - `which`: a list of which predictors are in each model
+  
+  - `outmat`: a version of `which` for printing
+  
+  - Several metrics: `rsq`, `rss`, `adjr2`, `cp`, `bic`
+  
+  
+
+
+## Summary of `regsubsets`
+- Stars indicate variable is included in model. 
+
+- For readability, I've only shown models with 5 or fewer variables
+
+\footnotesize
+
+```{r eval = F, echo = T}
+summary(best_subset)$outmat
+```
+
+\footnotesize
+
+```{r}
+best_subset5<-regsubsets(Solubility ~.-NumNonHBonds -NumHydrogen -NumRings , data = solTrain, nvmax = 5)
+summary(best_subset5)$outmat
+```
+
+## Other Selection Metrics
+
+The `summary` function can return selection metrics for each model.
+
+\small
+
+```{r echo = T}
+d <- data.frame(model = 1:17,
+  adjr2 = summary(best_subset)$adjr2,
+  rss = summary(best_subset)$rss,
+  cp = summary(best_subset)$cp,
+  bic = summary(best_subset)$bic)
+d %>% head()
+```
+
+## Vizualizing Variables
+
+The variables present can also be plotted directly using `plot`:
+
+\footnotesize
+
+```{r echo = T}
+plot(best_subset, scale = "adjr2")
+```
+
+\pause
+
+\normalsize
+
+- Models are ordered by by selection statistic. Dark rectangles indicate variable presence in best model for that statistic's value.
+
+## Plotting
+
+We can use `ggplot2` to visualize selection metric as a function of variable number
+\small
+
+```{r echo = T, fig.height=2 }
+ggplot(d, aes(x = model, y = adjr2))+geom_line()+theme_bw()
+```
+
+
+```{r echo = T, fig.height=2}
+ggplot(d, aes(x = model, y = rss))+geom_line()+theme_bw()
+```
+
+## Plotting
+
+\small
+
+```{r echo = T, fig.height=2 }
+ggplot(d, aes(x = model, y = cp))+geom_line()+theme_bw()
+```
+
+
+```{r echo = T, fig.height=2 }
+ggplot(d, aes(x = model, y = bic))+geom_line()+theme_bw()
+```
+
+## Finding Best Subset
+
+- To calculate the absolute best `cp`, `bic`, etc. we use either the `which.min` or `which.max` function
+
+\footnotesize
+
+\pause
+
+```{r echo = T}
+adjr2.max <- which.max(summary(best_subset)$adjr2)
+rss.min <- which.min(summary(best_subset)$rss)
+cp.min <- which.min(summary(best_subset)$cp)
+bic.min <- which.min(summary(best_subset)$bic)
+data.frame(adjr2.max, rss.min, cp.min, bic.min)
+```
+
+\pause
+
+- So what model is best?
+
+  \pause
+  
+  - Usually the simplest model.
+  
+  
+## Model Coefficients
+
+
+- To show coefficients associated with the model with lowest `bic`, use `coef`:
+
+\footnotesize
+
+```{r echo = T}
+coef(best_subset, bic.min)
+```
+\pause
+
+\normalsize
+
+- And to get a vector of variable names, use `names`:
+
+\footnotesize
+
+```{r echo = T}
+names(coef(best_subset, bic.min))
+```
+
+
+## Forward Selection
+
+Forward selection is a *computationally efficient* alternative to best subset
+
+\pause
+
+- To perform forward selection, create the best 1 variable model. Then create $p-1$ new $2$ variable models by adding each other predictor one-at-a-time to the existing $1$-variable model. Repeat for $3$ variables and so on.
+
+\pause
+
+- Compared to Best Subset, forward selection computation time grows polynomially in $p$: $\textrm{Num. Models} = 1 + \frac{p(p+1)}{2}$
+
+\pause
+
+- Forward selection tends to favor parsimonous models 
+
+\pause
+
+- Downsides?
+
+  \pause
+  
+  - Not guaranteed to find the best model (or even something close to the best model)
+  
+  \pause
+  
+  - Early predictors may become redundant
+  
+  \pause
+  
+  - Can be unstable
+  
+
+
+## Backward Elimination
+
+Backward Elimination is another *computationally efficient* alternative to best subset
+
+\pause
+
+- To perform backward selection, begin with full model. Then create $p-1$ new $p-1$ variable models by removing one-at-a-time each other predictor from the existing $p$-variable model. Repeat for $p-2$ variables and so on.
+
+\pause
+
+- Compared to Best Subset, backward elimination computation time grows polynomially in $p$: $\textrm{Num. Models} = 1 + \frac{p(p+1)}{2}$
+
+\pause
+
+- Backward elimination tends to favor in-depth models 
+
+\pause
+
+- Downsides?
+
+  \pause
+  
+  - Not guaranteed to find the best model (or even something close to the best model)
+  
+  \pause
+  
+  - Requires fewer predictors than observations
+  
+  \pause
+  
+  - Susceptible to multicollinearity 
+  
+  \pause
+  
+  - Can be unstable
+
+## Forward/Backward Selection in R
+
+We again use the `regsubsets` function in the `leaps` library.
+
+\small
+
+```{r echo = T}
+forward_select<-regsubsets(Solubility~.-NumNonHBonds -NumHydrogen -NumRings,
+                        data = solTrain, nvmax = 17, method = "forward")
+
+backward_elim<-regsubsets(Solubility~.-NumNonHBonds -NumHydrogen -NumRings,
+                        data = solTrain, nvmax = 17, method = "backward")
+```
+
+
+- All of the same tools used for best subsets are available for forward and backward selection
+
+
+## Comparison of Models
+
+\tiny 
+
+```{r echo = F, out.width = "90%"}
+metrics <- data.frame(model = 1:17,
+  adjr2 = summary(best_subset)$adjr2,
+  rss = summary(best_subset)$rss,
+  cp = summary(best_subset)$cp,
+  bic = summary(best_subset)$bic) %>% 
+  rbind(
+    data.frame(model = 1:17,
+        adjr2 = summary(forward_select)$adjr2,
+        rss = summary(forward_select)$rss,
+        cp = summary(forward_select)$cp,
+        bic = summary(forward_select)$bic
+    )
+  )%>% 
+  rbind(
+    data.frame(model = 1:17,
+        adjr2 = summary(backward_elim)$adjr2,
+        rss = summary(backward_elim)$rss,
+        cp = summary(backward_elim)$cp,
+        bic = summary(backward_elim)$bic
+    )
+  ) %>% mutate(method = rep(c("best", "forward", "backward"), each = 17))
+
+metrics %>% pivot_longer(!c(model, method), names_to =  "var", values_to =  "value") %>% ggplot(aes(x = model, y = value, color = method))+geom_line(size = .5)+facet_wrap(~var, scales = "free")+theme_bw()
+```
+
+
+## Model Testing
+
+- Let's go with 4 models, based on best subset (since we have it)
+
+  - 5 variables (elbow of metric plots)
+  
+  - 9 variables (best bic)
+  
+  - 15 variables (best adjusted $R^2$)
+  
+  - 17 variables (the full model)
+  
+```{r}
+mod5 <-lm(Solubility ~ NumNonHAtoms + NumBonds + NumRotBonds+ NumNitrogen + NumOxygen  , data = solTrain)
+mod9 <-lm(Solubility ~ MolWeight + NumBonds + NumMultBonds+ NumRotBonds + NumAromaticBonds + NumNitrogen + NumOxygen + NumChlorine + SurfaceArea2  , data = solTrain)
+mod15 <-lm(Solubility ~.-NumNonHBonds -NumHydrogen -NumRings - NumNitrogen - NumOxygen , data = solTrain)
+mod17 <-lm(Solubility~. -.-NumNonHBonds -NumHydrogen -NumRings  , data = solTrain)
+```
+
+- We'll build each model on the training data, and then compute MSE on the test data.
+
+```{r}
+preds5 <- predict(mod5, solTest)
+preds9 <- predict(mod9, solTest)
+preds15 <- predict(mod15, solTest)
+preds17 <- predict(mod17, solTest)
+
+all_preds <- data.frame(model_5 = preds5, model_9 = preds9, model_15 =  preds15, model_17 = preds17, actual = solTest$Solubility, observation = 1:316) %>% pivot_longer(!c(observation, actual), names_to = "model", values_to = "prediction"  )
+
+all_preds %>% mutate(sq_err = (actual - prediction)^2) %>% group_by(model) %>% summarize(mse = mean(sq_err)) %>% arrange(mse)
+```
+
