@@ -32,6 +32,26 @@ Full_Model_predictions <- function(model, test_data){
 
 ```
 
+```{r}
+Simple_Model_processing <- function(my_data){
+  my_data
+}
+
+Simple_Model_model <- function(training_data){ 
+  library(tidyverse)     ## Load whatever packages you need
+  my_mod <- lm(Sale_Price ~ Gr_Liv_Area,
+               data = training_data)    
+  my_mod
+}
+
+Simple_Model_predictions <- function(model, test_data){ 
+  library(tidyverse)     ## Load whatever packages you need
+  my_preds <- predict(model, test_data)   ## Make predictions based on your model. Don't change this line.
+  my_preds<- my_preds*1 
+  my_preds
+}
+
+```
 
 
 ```{r}
@@ -518,7 +538,8 @@ names <- c("Ananke_Krishnan",
            "Tina_Qin",
            "Maxwell_VanLandschoot",
             "Taylor_Blair",
-           "Full_Model"
+           "Full_Model",
+           "Simple_Model"
            )
 
 #Call the processing data function, model construction function, and predictions function associated with a given name, 
@@ -631,3 +652,10 @@ rMSE %>% mutate(bootstrap = as.factor(1:20)) %>% pivot_longer(!bootstrap, names_
   theme_bw()+
   theme(legend.position = "none") 
 ```
+```{r}
+
+rMSE %>% 
+mutate(bootstrap = as.factor(1:20)) %>% 
+pivot_longer(!bootstrap, names_to = "names", values_to = "rmse") %>% group_by(names) %>% summarize(mean_rmse = mean(rmse), sd_rmse= sd(rmse)) %>% arrange(desc(mean_rmse))
+```
+
