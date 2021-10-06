@@ -1,0 +1,633 @@
+---
+title: "Homework 3 Models"
+author: "Wolfgang Brightenburg"
+date: "10/3/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Code Chunks for Each Model
+
+```{r}
+Full_Model_processing <- function(my_data){
+  my_data
+}
+
+Full_Model_model <- function(training_data){ 
+  library(tidyverse)     ## Load whatever packages you need
+  my_mod <- lm(Sale_Price ~ .,
+               data = training_data)    
+  my_mod
+}
+
+Full_Model_predictions <- function(model, test_data){ 
+  library(tidyverse)     ## Load whatever packages you need
+  my_preds <- predict(model, test_data)   ## Make predictions based on your model. Don't change this line.
+  my_preds<- my_preds*1 
+  my_preds
+}
+
+```
+
+
+
+```{r}
+Ananke_Krishnan_processing <- function(my_data){
+  my_data
+}
+
+Ananke_Krishnan_model <- function(training_data){ 
+  library(tidyverse)     ## Load whatever packages you need
+  my_mod <- lm(Sale_Price ~ Year_Built + First_Flr_SF + TotRms_AbvGrd + Garage_Area + House_Style +
+                 Overall_Cond + First_Flr_SF*Garage_Area,
+               data = training_data)    
+  my_mod
+}
+
+Ananke_Krishnan_predictions <- function(model, test_data){ 
+  library(tidyverse)     ## Load whatever packages you need
+  my_preds <- predict(model, test_data)   ## Make predictions based on your model. Don't change this line.
+  my_preds<- my_preds*1 
+  my_preds
+}
+
+```
+
+```{r}
+Bhavjot_Khurana_processing <- function(my_data){
+  processed_data <- my_data #%>% filter(Lot_Area < 40000)  
+  processed_data 
+}
+
+Bhavjot_Khurana_model <- function(training_data){ 
+  library(tidyverse)     ## Load whatever packages you need
+  my_mod <- lm(Sale_Price ~ Exter_Cond + poly(Lot_Area, degree = 2) + Garage_Area + TotRms_AbvGrd + Year_Remod_Add + Year_Built + Year_Built:Year_Remod_Add, data = training_data)    
+  my_mod  
+}
+
+Bhavjot_Khurana_predictions <- function(model, test_data){ 
+  library(tidyverse)     ## Load whatever packages you need
+  my_preds <- predict(model, test_data)   ## Make predictions based on your model. Don't change this line.
+  my_preds<- my_preds*1
+}
+```
+
+
+```{r}
+Calvin_BeemanWeber_processing <- function(my_data){
+  library(tidyverse) ## Load whatever packages you need
+  processed_data <- my_data %>% mutate(Sale_Price = Sale_Price) ## Include all relevant processing steps. The included step is just a placeholder example
+  processed_data
+}
+
+Calvin_BeemanWeber_model <- function(training_data){ 
+  library(tidyverse)     ## Load whatever packages you need
+  my_mod <- lm(log(Sale_Price) ~ MS_Zoning + Year_Built + Overall_Cond + Year_Built + Gr_Liv_Area + Year_Remod_Add + Full_Bath + Year_Built:Year_Remod_Add, data = training_data)    ## Create your model. Replace 1 with your actual model formula. Do not replace "training_data"
+  my_mod      ##return your model as output
+}
+
+Calvin_BeemanWeber_predictions <- function(model, test_data){ 
+  library(tidyverse)     ## Load whatever packages you need
+  my_preds <- predict(model, test_data)   ## Make predictions based on your model. Don't change this line.
+  my_preds<- exp(my_preds) ## Transform your model predictions back to the original units for Sale_Price, if necessary
+  my_preds      ##return your predictions as output
+}
+```
+
+```{r}
+Emma_Thoron_processing <- function(my_data){
+  library(tidyverse) ## Load whatever packages you need
+  processed_data <- my_data %>% mutate(Gr_Liv_Area = sqrt(Gr_Liv_Area)) ## Include all relevant processing steps. The included step is just a placeholder example
+  processed_data ## returns the processed data as output
+}
+
+Emma_Thoron_model <- function(training_data){ 
+  library(tidyverse)     ## Load whatever packages you need
+  my_mod <- lm(log(Sale_Price) ~ sqrt(Gr_Liv_Area) + 
+              Total_Bsmt_SF + 
+              Garage_Area + 
+              Paved_Drive +
+              Central_Air +
+              Heating_QC, data = training_data)    ## Create your model. Replace 1 with your actual model formula. Do not replace "training_data"
+  my_mod      ##return your model as output
+}
+
+Emma_Thoron_predictions <- function(model, test_data){ 
+  library(tidyverse)     ## Load whatever packages you need
+  my_preds <- predict(model, test_data)   ## Make predictions based on your model. Don't change this line.
+  my_preds<- exp(my_preds) ## Transform your model predictions back to the original units for Sale_Price, if necessary
+  my_preds      ##return your predictions as output
+}
+
+```
+
+```{r}
+Gillian_McGinnis_processing <- function(my_data){
+  # library(tidyverse)
+  processed_data <- my_data
+  processed_data
+}
+
+Gillian_McGinnis_model <- function(training_data){ 
+  my_mod <- lm(
+    log(Sale_Price) ~
+      poly(Year_Built, degree=2, raw = TRUE) +
+      Gr_Liv_Area + Lot_Area + TotRms_AbvGrd + Total_Bsmt_SF + Garage_Area + Fireplaces +
+      Overall_Cond +
+      Year_Built:House_Style,
+    data = training_data)    # creating model
+  my_mod      # returns model as output
+}
+
+Gillian_McGinnis_predictions <- function(model, test_data){ 
+  my_preds <- predict(model, test_data)   # making predictions based on model
+  my_preds <- exp(my_preds) # xform model predictions back to the original units for Sale_Price
+  my_preds      # return predictions as output
+}
+```
+
+```{r}
+Isabelle_Caldwell_processing <- function(my_data){
+  library(tidyverse) ## Load whatever packages you need
+  processed_data <- my_data %>% mutate(BsmtFin_Type_1 = fct_relevel(BsmtFin_Type_1, "No_Basement", "Unf", "LwQ", "Rec", "BLQ", "ALQ", "GLQ"), 
+                                       Overall_Cond = fct_relevel(Overall_Cond, "Very_Poor", "Poor", "Fair", "Below_Average", "Average", "Above_Average", "Good", "Very_Good", "Excellent")) 
+  processed_data ## returns the processed data as output
+}
+
+Isabelle_Caldwell_model <- function(training_data){ 
+  library(tidyverse)     ## Load whatever packages you need
+  my_mod <- lm(Sale_Price ~ Year_Built + BsmtFin_Type_1  + Fireplaces  + Garage_Area + House_Style  + Gr_Liv_Area + I(Gr_Liv_Area^2), data = training_data)    ## Create your model. Replace 1 with your actual model formula. Do not replace "training_data"
+  my_mod      ##return your model as output
+}
+
+Isabelle_Caldwell_predictions <- function(model, test_data){ 
+  library(tidyverse)     ## Load whatever packages you need
+  my_preds <- predict(model, test_data)   ## Make predictions based on your model. Don't change this line.
+  my_preds<- my_preds*1 ## Transform your model predictions back to the original units for Sale_Price, if necessary
+  my_preds      ##return your predictions as output
+}
+
+
+```
+
+```{r}
+Jakob_Shimer_processing <- function(my_data){
+  return(my_data)
+}
+
+Jakob_Shimer_model <- function(training_data){ 
+  my_mod <- lm(log(Sale_Price) ~ Garage_Area + poly(Year_Built, 2) + Gr_Liv_Area + First_Flr_SF*Electrical + TotRms_AbvGrd + Overall_Cond + Heating_QC + Functional ,data = training_data)
+  my_mod      ##return your model as output
+}
+
+Jakob_Shimer_predictions <- function(model, test_data){ 
+     ##return your predictions as output
+  my_preds <- predict(model, test_data)
+  exp(my_preds)      ##return your predictions as output
+}
+```
+
+```{r}
+Jon_deVries_processing <- function(my_data){
+  library(tidyverse) ## Load whatever packages you need
+  processed_data <- my_data  ## Include all relevant processing steps. The included step is just a placeholder example
+  processed_data ## returns the processed data as output
+}
+ 
+Jon_deVries_model <- function(training_data){ 
+  library(tidyverse)     ## Load whatever packages you need
+  my_mod <- lm(Sale_Price ~ Lot_Area + Gr_Liv_Area + Year_Remod_Add + Sale_Type + Overall_Cond + Condition_1, data = training_data)    ## Create your model. Replace 1 with your actual model formula. Do not replace "training_data"
+  my_mod      ##return your model as output
+}
+ 
+Jon_deVries_predictions <- function(model, test_data){ 
+  library(tidyverse)     ## Load whatever packages you need
+  my_preds <- predict(model, test_data)   ## Make predictions based on your model. Don't change this line.
+  my_preds<- my_preds*1 ## Transform your model predictions back to the original units for Sale_Price, if necessary
+  my_preds      ##return your predictions as output
+}
+```
+
+
+```{r}
+Kenai_BurtonHeckman_processing <- function(my_data){
+  library(tidyverse) ## Load whatever packages you need
+  library(fastDummies)
+  processed_data <- my_data %>% ## Include all relevant processing steps. The included step is just a placeholder example
+    dummy_cols(remove_first_dummy = T) %>%
+    select(where(is.numeric)) %>%
+    rename_with(~ gsub(" ", "", .x, fixed = TRUE))
+  processed_data ## returns the processed data as output
+}
+
+Kenai_BurtonHeckman_model <- function(training_data){ 
+  library(tidyverse)     ## Load whatever packages you need
+  #forgive me
+  my_mod <- lm(Sale_Price ~ Lot_Frontage + Lot_Area + Year_Built + Year_Remod_Add + 
+    Mas_Vnr_Area + BsmtFin_SF_1 + Bsmt_Unf_SF + Total_Bsmt_SF + 
+    First_Flr_SF + Second_Flr_SF + Gr_Liv_Area + Bsmt_Full_Bath + 
+    Bedroom_AbvGr + Kitchen_AbvGr + Fireplaces + Garage_Cars + 
+    Garage_Area + Wood_Deck_SF + Screen_Porch + Pool_Area + Latitude + 
+    MS_SubClass_One_and_Half_Story_Finished_All_Ages + MS_SubClass_One_and_Half_Story_Unfinished_All_Ages + 
+    MS_SubClass_One_Story_1945_and_Older + MS_SubClass_One_Story_1946_and_Newer_All_Styles + 
+    MS_SubClass_One_Story_with_Finished_Attic_All_Ages + MS_SubClass_PUD_Multilevel_Split_Level_Foyer + 
+    MS_SubClass_Two_Family_conversion_All_Styles_and_Ages + MS_SubClass_Two_Story_1945_and_Older + 
+    MS_SubClass_Two_Story_PUD_1946_and_Newer + MS_Zoning_Floating_Village_Residential + 
+    MS_Zoning_Residential_Low_Density + Alley_No_Alley_Access + 
+    Lot_Shape_Moderately_Irregular + Lot_Shape_Regular + Lot_Shape_Slightly_Irregular + 
+    Land_Contour_HLS + Lot_Config_CulDSac + Lot_Config_Inside + 
+    Land_Slope_Sev + Condition_1_Norm + Condition_1_PosA + Condition_1_PosN + 
+    Bldg_Type_OneFam + Bldg_Type_Twnhs + Bldg_Type_TwnhsE + House_Style_One_Story + 
+    House_Style_SFoyer + House_Style_SLvl + House_Style_Two_and_Half_Fin + 
+    House_Style_Two_and_Half_Unf + House_Style_Two_Story + Overall_Cond_Average + 
+    Overall_Cond_Below_Average + Overall_Cond_Excellent + Overall_Cond_Fair + 
+    Overall_Cond_Good + Overall_Cond_Poor + Overall_Cond_Very_Good + 
+    Overall_Cond_Very_Poor + Roof_Style_Gable + Roof_Style_Gambrel + 
+    Roof_Style_Mansard + Exterior_1st_CemntBd + Exterior_1st_HdBoard + 
+    Exterior_1st_Stucco + Exterior_1st_VinylSd + Exterior_1st_WdSdng + 
+    Exterior_2nd_BrkFace + Exterior_2nd_Plywood + Exterior_2nd_WdSdng + 
+    Exterior_2nd_WdShng + Mas_Vnr_Type_BrkFace + Mas_Vnr_Type_Stone + 
+    Exter_Cond_Fair + Foundation_PConc + Foundation_Stone + Bsmt_Cond_Poor + 
+    Bsmt_Exposure_Mn + Bsmt_Exposure_No + Bsmt_Exposure_No_Basement + 
+    BsmtFin_Type_1_LwQ + BsmtFin_Type_1_Rec + BsmtFin_Type_2_GLQ + 
+    BsmtFin_Type_2_No_Basement + BsmtFin_Type_2_Rec + BsmtFin_Type_2_Unf + 
+    Heating_QC_Good + Electrical_FuseP + Functional_Typ + Garage_Type_Basment + 
+    Garage_Type_CarPort + Garage_Type_More_Than_Two_Types + Garage_Finish_RFn + 
+    Garage_Cond_Poor + Paved_Drive_Partial_Pavement + Paved_Drive_Paved + 
+    Fence_Minimum_Privacy + Fence_Minimum_Wood_Wire + Bldg_Type_TwoFmCon, data = training_data)    ## Create your model. Replace 1 with your actual model formula. Do not replace "training_data"
+  my_mod      ##return your model as output
+}
+
+Kenai_BurtonHeckman_predictions <- function(model, test_data){ 
+  library(tidyverse)     ## Load whatever packages you need
+  my_preds <- predict(model, test_data)   ## Make predictions based on your model. Don't change this line.
+  my_preds      ##return your predictions as output
+}
+```
+
+```{r}
+Maxwell_VanLandschoot_processing <- function(my_data){
+  library(tidyverse)
+  library(rsample) #just in case
+  library(gglm) #just in case
+  library(lmtest) #just in case
+  processed_data <- my_data %>% 
+    mutate(log_Sale_Price = log(Sale_Price)) %>%
+    mutate(Overall_Cond = case_when(Overall_Cond == "Very_Poor"~ "Below_Average",
+                                  Overall_Cond =="Poor" ~ "Below_Average",
+                                  Overall_Cond =="Fair" ~ "Below_Average",
+                                  Overall_Cond =="Above_Average" ~ "Above_Average",
+                                  Overall_Cond =="Excellent" ~ "Above_Average",
+                                  Overall_Cond =="Good" ~ "Above_Average",
+                                  Overall_Cond =="Average" ~ "Average",
+                                  Overall_Cond =="Very_Good" ~ "Above_Average",
+                                  Overall_Cond =="Below_Average" ~ "Below_Average"
+                                  )) %>%
+        mutate(MS_SubClass = case_when(MS_SubClass =="One_and_Half_Story_PUD_All_Ages"~ "Other",
+                                   MS_SubClass =="One_Story_with_Finished_Attic_All_Ages"~ "Other",
+                                   MS_SubClass =="PUD_Multilevel_Split_Level_Foyer"~ "Other",
+                                   MS_SubClass =="One_and_Half_Story_Unfinished_All_Ages"~ "Other",
+                                   MS_SubClass =="Two_and_Half_Story_All_Ages"~ "Other",
+                                   TRUE ~ as.character(MS_SubClass)
+                                   )) %>%
+    mutate(Garage_Cars = case_when(Garage_Cars == 5 ~ "3+",
+                                   Garage_Cars == 4 ~ "3+",
+                                   Garage_Cars == 3 ~ "3+",
+                                   Garage_Cars == 2 ~ "2",
+                                   Garage_Cars == 1 ~ "1",
+                                   Garage_Cars == 0 ~ "0",
+                                   ))
+  processed_data
+}
+
+Maxwell_VanLandschoot_model <- function(training_data){ 
+  library(tidyverse)
+  my_mod <- lm(log_Sale_Price ~ log(Lot_Area) + Total_Bsmt_SF + 
+                 Gr_Liv_Area + 
+                 Overall_Cond + 
+                 MS_SubClass + 
+                 Bsmt_Exposure + 
+                 Fireplaces + 
+                 as.character(Garage_Cars) + 
+                 Year_Built + 
+                 Year_Remod_Add, data = training_data)
+  my_mod
+}
+
+Maxwell_VanLandschoot_predictions <- function(model, test_data){    ## Load whatever packages you need
+  my_preds <- predict(model, test_data)   ## Make predictions based on your model. Don't change this line.
+  my_preds <- exp(my_preds) ## Transform your model predictions back to the original units for Sale_Price, if necessary
+  my_preds ##return your predictions as output
+}
+
+```
+
+```{r}
+Rishi_Krishnamurthy_processing <- function(my_data){
+  my_data$Overall_Cond <- as.factor(my_data$Overall_Cond)
+  my_data$Overall_Cond <- my_data$Overall_Cond %>% fct_relevel("Very_Poor",
+                                                         "Poor",
+                                                         "Below_Average",
+                                                         "Average", 
+                                                         "Above_Average",
+                                                         "Fair", 
+                                                         "Good", 
+                                                         "Very_Good", 
+                                                         "Excellent")
+  my_data <- my_data %>% mutate(log_price = log(Sale_Price))
+  processed_data <- my_data
+  ## Include all relevant processing steps. The included step is just a placeholder example
+  processed_data ## returns the processed data as output
+}
+
+Rishi_Krishnamurthy_model <- function(training_data){ 
+  my_mod <- lm(log_price ~ Overall_Cond*Gr_Liv_Area+Lot_Area+Year_Built+Year_Remod_Add+Heating_QC+MS_SubClass+House_Style+Garage_Area, data = training_data)    ## Create your model. Replace 1 with your actual model formula. Do not replace "training_data"
+  my_mod      ##return your model as output
+}
+
+Rishi_Krishnamurthy_predictions <- function(model, test_data){ 
+  my_preds <- predict(model, test_data) 
+  my_preds<- exp(my_preds)
+  my_preds 
+}
+
+
+```
+
+```{r}
+Robin_H_processing <- function(my_data){
+  my_data
+}
+
+Robin_H_model <- function(training_data){ 
+  my_mod <- lm(Sale_Price ~ MS_Zoning + Lot_Frontage + Lot_Area + Street + Alley + Lot_Shape 
+               + Land_Contour + Lot_Config + Land_Slope + Bldg_Type + House_Style + Year_Built
+               + Year_Remod_Add + Roof_Style + Mas_Vnr_Type + Mas_Vnr_Area + Exter_Cond 
+               + Foundation + Bsmt_Exposure + BsmtFin_Type_1 + BsmtFin_SF_1 + BsmtFin_Type_2  
+               + BsmtFin_SF_2 + Bsmt_Unf_SF + Total_Bsmt_SF + Heating_QC + Central_Air
+               + Electrical + First_Flr_SF + Second_Flr_SF + Gr_Liv_Area + Bsmt_Full_Bath 
+               + Bsmt_Half_Bath + Bedroom_AbvGr + Kitchen_AbvGr + Functional + Fireplaces 
+               + Garage_Type + Garage_Finish + Garage_Cars + Garage_Area + Garage_Cond 
+               + Paved_Drive + Wood_Deck_SF + Open_Porch_SF + Enclosed_Porch 
+               + Three_season_porch + Screen_Porch + Pool_Area + Fence + Misc_Val + Mo_Sold
+               + Year_Sold + Sale_Price + Longitude + Latitude, data = training_data)    ## Create your model. Replace 1 with your actual model formula. Do not replace "training_data"
+  my_mod      ##return your model as output
+}
+
+Robin_H_predictions <- function(model, test_data){ 
+  library(tidyverse)     ## Load whatever packages you need
+  my_preds <- predict(model, test_data)   ## Make predictions based on your model. Don't change this line.
+  my_preds<- my_preds*1 ## Transform your model predictions back to the original units for Sale_Price, if necessary
+  my_preds      ##return your predictions as output
+}
+```
+
+```{r}
+Rohan_Buggana_processing <- function(house){
+
+  processed_data <- house %>% mutate(Sale_Price = log10(Sale_Price)) ## Include all relevant processing steps. The included step is just a placeholder example
+  processed_data ## returns the processed data as output
+}
+
+Rohan_Buggana_model <- function(training_data){ 
+  my_mod <- lm(Sale_Price ~ Gr_Liv_Area + First_Flr_SF + Year_Built + Garage_Cars + Bldg_Type + Exter_Cond, data = training_data)    ## Create your model. Replace 1 with your actual model formula. Do not replace "training_data"
+  my_mod      ##return your model as output
+}
+
+Rohan_Buggana_predictions <- function(model, test_data){   ## Load whatever packages you need
+  my_preds <- predict(model, test_data)   ## Make predictions based on your model. Don't change this line.
+  my_preds <- 10^(my_preds) ## Transform your model predictions back to the original units for Sale_Price, if necessary
+  my_preds      ##return your predictions as output
+}
+
+```
+
+```{r}
+simon_ahn_processing <- function(my_data){
+  my_data ## returns the processed data as output
+}
+
+simon_ahn_model <- function(training_data){ 
+  my_mod <- lm(log(Sale_Price) ~ Overall_Cond + Fireplaces + MS_Zoning + Garage_Area +Full_Bath + Total_Bsmt_SF   , data = training_data)## Create your model. Replace 1 with your actual model formula. Do not replace "training_data"
+  my_mod
+}
+
+simon_ahn_predictions <- function(model, test_data){    ## Load whatever packages you need
+  my_preds <- predict(model, test_data)   ## Make predictions based on your model. Don't change this line.
+  my_preds<- exp(my_preds)## Transform your model predictions back to the original units for Sale_Price, if necessary
+  my_preds      ##return your predictions as output
+}
+```
+
+
+```{r}
+SkyPeterson_processing <- function(Data){
+  DataProcessed <- Data %>% 
+    mutate(LogSale = log10(Sale_Price)) %>% 
+    select(-Sale_Price)
+  DataProcessed ## returns the processed data as output
+}
+
+SkyPeterson_model <- function(DataTraining){ 
+  Mod <- lm(LogSale ~ Overall_Cond + Gr_Liv_Area + Total_Bsmt_SF + Fireplaces + Garage_Cars + MS_Zoning + Year_Built + Bedroom_AbvGr, data = DataTraining)    ## Create your model. Replace 1 with your actual model formula. Do not replace "training_data"
+  Mod      ##return your model as output
+}
+
+SkyPeterson_predictions <- function(Model, DataTest){ 
+  Preds <- predict(Model, DataTest)   ## Make predictions based on your model. Don't change this line.
+  Preds<- 10^Preds ## Transform your model predictions back to the original units for Sale_Price, if necessary
+  Preds      ##return your predictions as output
+}
+```
+
+```{r}
+Taylor_Blair_processing <- function(my_data){
+  center_of_ames <- c(mean(my_data$Latitude), mean(my_data$Longitude))
+  processed_data <- my_data %>% 
+    mutate_if(is.character,as.factor) %>%
+    mutate(dist_from_center_lat = (center_of_ames[1]-Latitude)*364000,
+         dist_from_center_long = (center_of_ames[2]-Longitude)*288200,
+         dist_from_center = sqrt((dist_from_center_lat^2)+ (dist_from_center_long^2))) ## Include all relevant processing steps. The included step is just a placeholder example
+  processed_data ## returns the processed data as output
+}
+
+Taylor_Blair_model <- function(training_data){ 
+  my_mod <- lm(Sale_Price ~ . + Screen_Porch:Lot_Area, data = training_data)    ## Create your model. Replace 1 with your actual model formula. Do not replace "training_data"
+  my_mod      ##return your model as output
+}
+
+Taylor_Blair_predictions <- function(model, test_data){ 
+  library(tidyverse)     ## Load whatever packages you need
+  my_preds <- predict(model, test_data)   ## Make predictions based on your model. Don't change this line.
+  my_preds<- my_preds*1 
+}
+```
+
+```{r}
+Tina_Qin_processing <- function(my_data){
+  library(tidyverse) ## Load whatever packages you need
+  processed_data <- my_data %>% mutate(Sale_Price = Sale_Price) ## Include all relevant processing steps. The included step is just a placeholder example
+  processed_data ## returns the processed data as output
+}
+
+Tina_Qin_model <- function(training_data){ 
+  library(tidyverse)     ## Load whatever packages you need
+  my_mod <- lm(Sale_Price ~ Overall_Cond + Heating_QC + Central_Air + Bsmt_Cond + I((Lot_Area)^2) + Gr_Liv_Area + TotRms_AbvGrd + TotRms_AbvGrd*Gr_Liv_Area, data = training_data)    ## Create your model. Replace 1 with your actual model formula. Do not replace "training_data"
+  my_mod      ##return your model as output
+}
+
+Tina_Qin_predictions <- function(model, test_data){ 
+  library(tidyverse)     ## Load whatever packages you need
+  my_preds <- predict(model, test_data)   ## Make predictions based on your model. Don't change this line.
+  my_preds<- my_preds*1 ## Transform your model predictions back to the original units for Sale_Price, if necessary
+  my_preds      ##return your predictions as output
+}
+```
+
+# Model Evaluation
+
+Please note that the Kenai_BurtonHeckman functions did not work with the construct results function, and need to be evaluated manually. I think this is because of some strangeness in processing the test data with the fastDummies library which Kenai used; my theory is that when the test data's categorical variables are split apart into one hot variables, some factors that have one-hot variables in the training data aren't present in the test data so the model is trying to predict on data that's missing one or more variables. 
+
+A few models were slightly adjusted to allow function to run on test data:
+
+1. Bhav had a pre-processing step that filtered out observations with lot area greater than 40000, which was dropping one of the test observations, and meant that his prediction vector was shorter than others.
+
+2. Calvin interpreted `log` as base 10, rather than base `e`, resulting in prediction errors that were not on the same scale as others.
+
+```{r}
+library(tidyverse)
+training_data <- read_csv("house_train.csv")
+
+#Vector of student names to iterate over
+names <- c("Ananke_Krishnan",
+           "Bhavjot_Khurana",
+           "Calvin_BeemanWeber",
+           "Emma_Thoron",
+           "Gillian_McGinnis",
+           "Isabelle_Caldwell",
+           "Jakob_Shimer",
+           "Jon_deVries",
+           "Rishi_Krishnamurthy",
+           "Robin_H",
+           "Rohan_Buggana",
+           "simon_ahn",
+           "SkyPeterson",
+           "Tina_Qin",
+           "Maxwell_VanLandschoot",
+            "Taylor_Blair",
+           "Full_Model"
+           )
+
+#Call the processing data function, model construction function, and predictions function associated with a given name, 
+#model built on input training data, model tested on input test data
+evaluate_model <- function(name, training_data, test_data){
+  processed_training_data <- do.call(paste(name, "processing", sep = "_"), 
+                            list(training_data))
+  
+  processed_test_data <- do.call(paste(name, "processing", sep = "_"),
+                            list(test_data))
+  
+  mod <- do.call(paste(name, "model", sep = "_"), 
+                 list(processed_training_data)) 
+  predictions <- do.call(paste(name, "predictions", sep = "_"), 
+          list(mod, processed_test_data))  
+  return(predictions)
+}
+
+#called evaluate model function on each name, builds data frame of predictions for each student's model
+#column of df is a student's model, rows are individual predictions
+construct_results <- function(training_data, test_data){
+  results <- sapply(names, function(x){evaluate_model(x, 
+                         training_data, 
+                         test_data) }) %>% as.data.frame()  
+}
+
+#Test of construct_results function
+results_example <- construct_results(training_data, 
+                                     sample_n(training_data, size = 200))
+```
+
+```{r}
+house_test <- read_csv("house_test.csv")
+```
+
+ 
+
+
+```{r}
+results <- construct_results(training_data, 
+                                    house_test)
+```
+
+ 
+ 
+
+ 
+
+
+```{r}
+get_rmse <- function(preds){
+  sqrt(
+    mean(
+      (preds - house_test$Sale_Price)^2
+    )
+  )
+}
+```
+
+```{r}
+results %>% 
+  summarize(
+  across(.cols = everything(), get_rmse)
+)
+```
+
+ 
+```{r warning = F, message = F}
+rMSE <- data.frame()
+for(i in 1:20){
+  boot <- house_test %>% sample_n(size=597, replace = T)
+  results <- construct_results(training_data, 
+                                    boot)
+  get_rmse <- function(preds){
+  sqrt(
+    mean(
+      (preds - boot$Sale_Price)^2
+    )
+  )
+  }
+  rMSE <- rbind(rMSE, results %>% 
+  summarize(
+  across(.cols = everything(), get_rmse)
+))
+}
+```
+
+
+
+
+
+```{r}
+rMSE %>% 
+  mutate(bootstrap = as.factor(1:20)) %>% 
+  pivot_longer(!bootstrap, names_to = "names", values_to = "rmse") %>% 
+  ggplot(aes(x = names, y = rmse)) +
+  geom_point()+
+  stat_summary(fun = "mean", geom = "point", color = "red", size = 2)+
+  coord_flip()+labs(title = "Model rMSE, Based on 20 Bootstraps from Test Data",
+                    caption = "Red dot indicates mean rMSE")+
+  theme_bw()
+```
+
+```{r}
+rMSE %>% mutate(bootstrap = as.factor(1:20)) %>% pivot_longer(!bootstrap, names_to = "names", values_to = "rmse") %>% ggplot(aes(x = names, y = rmse, color = bootstrap)) +
+  geom_point()+
+  coord_flip()+
+  labs(title = "Model rMSE, Based on 20 Bootstraps from Test Data",
+       caption = "Colors indicate distinct bootstrap samples")+
+  theme_bw()+
+  theme(legend.position = "none") 
+```
