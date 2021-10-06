@@ -1,0 +1,40 @@
+---
+title: "Selection Bias"
+author: "Nate Wells"
+date: "October 6th, 2021"
+institute: "Math 243: Stat Learning"
+fontsize: 9pt
+output: 
+  beamer_presentation:
+    includes:
+      in_header: preamble.tex    
+graphics: yes    
+    
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = FALSE,
+	fig.align = "center",
+	message = FALSE,
+	cache = F,
+	fig.width = 6,
+	fig.height = 4,
+	warning = FALSE,
+	out.width = "70%"
+)
+library(tidyverse)
+library(knitr)
+library(ggthemes)
+library(ISLR)
+```
+
+## Outline
+
+In today's class, we will...
+
+- Perform some exploratory data analysis on a new data set
+
+- Investigate algorithms for selecting good subsets of predictors
+
