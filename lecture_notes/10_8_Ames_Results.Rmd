@@ -1,0 +1,147 @@
+---
+title: "Selection Bias"
+author: "Nate Wells"
+date: "October 6th, 2021"
+institute: "Math 243: Stat Learning"
+fontsize: 9pt
+output: 
+  beamer_presentation:
+    includes:
+      in_header: preamble.tex    
+graphics: yes    
+    
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = FALSE,
+	fig.align = "center",
+	message = FALSE,
+	cache = F,
+	fig.width = 6,
+	fig.height = 4,
+	warning = FALSE,
+	out.width = "70%"
+)
+library(tidyverse)
+library(knitr)
+library(ggthemes)
+library(ISLR)
+```
+
+## Outline
+
+In today's class, we will...
+
+ 
+- Discuss data from homework 3 (Ames House Prices)
+
+ 
+
+# Ames House Price Data
+
+## Overview
+
+```{r}
+ames_results <- read_csv("data/ames_results.csv")
+rMSE_boot <- read_csv("data/rMSE_boot.csv")
+```
+
+- Students fit models of varying complexity based on data on 66 predictors for 1808 houses.
+
+\pause
+
+- Models were assesses by computing rMSE on a test set of 597 houses. 
+
+- Additionally, to assess variability, rMSE was computed on 20 bootstrap samples from the test data.
+
+\pause
+```{r eval = F}
+median(ames_results$value)
+```
+
+- The median model rMSE was $\$33,249.21$.
+
+```{r eval = F}
+rMSE_boot_long <- rMSE_boot %>% mutate(boot_num = 1:20) %>% pivot_longer(!boot_num, values_to = "rmse") 
+
+rMSE_boot_long %>% group_by(name) %>% summarize(mean_rmse = mean(rmse), sd_rmse = sd(rmse)) %>% summarize(med_sd_rmse = median(sd_rmse))
+
+rMSE_boot_long %>% group_by(name) %>% summarize(mean_rmse = mean(rmse), sd_rmse = sd(rmse)) %>% arrange(mean_rmse)
+```
+
+
+- The median model standard deviation in rMSE on bootstrap samples was $\$1,890	$.
+
+\pause
+
+- The lowest three model rMSE were 
+\begin{center}
+\begin{tabular}{cccc}
+Name & Taylor & Maxwell & Robin \\ \hline
+rMSE & $\$23,405$ & $\$23,507$ & $\$24,084$  \\
+SD & $\$1,415$ & $\$1,202$ & $\$1,123$
+\end{tabular}
+\end{center}
+
+## Results
+
+```{r out.width = "90%"}
+rMSE_boot %>% 
+  mutate(bootstrap = as.factor(1:20)) %>% 
+  pivot_longer(!bootstrap, names_to = "names", values_to = "rmse") %>% 
+  ggplot(aes(x = names, y = rmse)) +
+  geom_point()+
+  stat_summary(fun = "mean", geom = "point", color = "red", size = 2)+
+  coord_flip()+labs(title = "Model rMSE, Based on 20 Bootstraps from Test Data",
+                    caption = "Red dot indicates mean rMSE")+
+  theme_bw()
+```
+
+## Results
+
+```{r out.width = "90%"}
+rMSE_boot %>% mutate(bootstrap = as.factor(1:20)) %>% pivot_longer(!bootstrap, names_to = "names", values_to = "rmse") %>% ggplot(aes(x = names, y = rmse, color = bootstrap)) +
+  geom_point()+
+  coord_flip()+
+  labs(title = "Model rMSE, Based on 20 Bootstraps from Test Data",
+       caption = "Colors indicate distinct bootstrap samples")+
+  theme_bw()+
+  theme(legend.position = "none") 
+```
+
+## Retrospective
+
+Trends:
+
+\pause
+
+
+- Models with more predictors tended to do better than models with fewer predictors
+
+\pause
+
+- Models with 0 interaction terms tended to do better than those with 1 interaction
+
+\pause
+
+- Models that transformed key predictors tended to do better than those that did not
+
+\pause
+
+- Performing log or root transformation moderately reduced test MSE
+
+\pause
+
+- The full model was near the front of the pack, while the simple model using just 1 predictor (`Gr_Liv_Area`) was at the back.
+
+\pause
+
+Further Investigation (Homework 5):
+
+- Use `regsubsets` to assist with feature selection
+
+- Use a cross-validation to assess and compare model performance
+
+

@@ -517,6 +517,8 @@ A few models were slightly adjusted to allow function to run on test data:
 
 2. Calvin interpreted `log` as base 10, rather than base `e`, resulting in prediction errors that were not on the same scale as others.
 
+3. I was able to add Kenai's model by combining test and training sets before performing hot-one encoding, then splitting them again. I did need to run a seperate function from `construct_results` to do so.
+
 ```{r}
 library(tidyverse)
 training_data <- read_csv("house_train.csv")
@@ -584,9 +586,20 @@ results <- construct_results(training_data,
 ```
 
  
- 
+```{r}
+kenai_data <- rbind(training_data %>% mutate(split = "train"), house_test %>% mutate(split = "test")) %>% Kenai_BurtonHeckman_processing()
+kenai_process_train <- kenai_data %>% filter(split_train ==1)
+kenai_process_test <- kenai_data %>% filter(split_train ==0)
+kenai_mod <- Kenai_BurtonHeckman_model(kenai_process_train)
 
- 
+``` 
+
+```{r}
+results <- cbind(results, 
+                 Kenai_BurtonHeckman = predict(kenai_mod, kenai_process_test)
+                 )
+```
+
 
 
 ```{r}
@@ -600,19 +613,33 @@ get_rmse <- function(preds){
 ```
 
 ```{r}
-results %>% 
+ames_results <- results %>% 
   summarize(
   across(.cols = everything(), get_rmse)
-)
+) %>% mutate(num = 1) %>% pivot_longer(!num) %>% select(-num) %>% arrange(value)
+ames_results
 ```
+
+```{r}
+write_csv(ames_results, "ames_results.csv")
+```
+
 
  
 ```{r warning = F, message = F}
+set.seed(1001)
 rMSE <- data.frame()
 for(i in 1:20){
   boot <- house_test %>% sample_n(size=597, replace = T)
   results <- construct_results(training_data, 
                                     boot)
+kenai_data <- rbind(training_data %>% mutate(split = "train"), boot %>% mutate(split = "test")) %>% Kenai_BurtonHeckman_processing()
+kenai_process_train <- kenai_data %>% filter(split_train ==1)
+kenai_process_test <- kenai_data %>% filter(split_train ==0)
+kenai_mod <- Kenai_BurtonHeckman_model(kenai_process_train)
+results <- cbind(results, 
+                 Kenai_BurtonHeckman = predict(kenai_mod, kenai_process_test)
+                 )
   get_rmse <- function(preds){
   sqrt(
     mean(
@@ -628,6 +655,9 @@ for(i in 1:20){
 ```
 
 
+```{r}
+write_csv(rMSE, "rMSE.csv")
+```
 
 
 
@@ -652,10 +682,15 @@ rMSE %>% mutate(bootstrap = as.factor(1:20)) %>% pivot_longer(!bootstrap, names_
   theme_bw()+
   theme(legend.position = "none") 
 ```
+
 ```{r}
 
 rMSE %>% 
 mutate(bootstrap = as.factor(1:20)) %>% 
-pivot_longer(!bootstrap, names_to = "names", values_to = "rmse") %>% group_by(names) %>% summarize(mean_rmse = mean(rmse), sd_rmse= sd(rmse)) %>% arrange(desc(mean_rmse))
+pivot_longer(!bootstrap, names_to = "names", values_to = "rmse") %>% group_by(names) %>% summarize(mean_rmse = mean(rmse), sd_rmse= sd(rmse)) %>% arrange( mean_rmse)
 ```
+
+ 
+ 
+ 
 
