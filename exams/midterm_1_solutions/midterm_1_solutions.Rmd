@@ -80,8 +80,48 @@ b) Create a sequence of at least 5 models of varying flexibility that predict $y
 
 *******************************************************
 
+a. The mean-squared error for a prediction on a test set can be decomposed as
+$$
+\textrm{MSE}(\hat f(x_0)) = \mathrm{Var}(\hat f(x_0)) + [\mathrm{Bias}(\hat f(x_0))]^2
+$$
 
+where variance indicates the variability in prediction at $x_0$ across a variety of different trainin sets, and where bias indicates the difference in the average prediction at $x_0$ from the true value at $x_0$. Minimal MSE is optained by simultaneously minimizing bias and variance. However, in many cases, decreasing the bias of a model comes at the cost of increasing variance, so the minimal MSE is not obtained by minimizing each separately. Generally, models with high flexibility tend to have lower bias and higher variance, while more rigid models have higher bias and lower variance. 
 
+b. We demonstrate the BV-tradeoff with the following sequence of models, which predict y as a function of $x_1$ and increasing polynomial powers of $x_2$. As the degree of the polynomial increases, the bias of the model decreases while the variance increases.
+
+In particular, in the final plot which shows test mse and training mse for each model, we see that models with both high and low complexity have higher test mse than a model with moderate complexity. This is despite the fact that higher complexity models have consistently lower training mse. It is also worth noting that the model with the lowest test MSE is exactly the model which mimics the functional form of the true relationship between $y$ and $x_1,x_2$.
+
+```{r}
+model_list <- list()
+model_list[[1]] <- lm(y ~ x1, data = sim_data)
+for (i in 2:6){
+  model_list[[i]] <- lm(y ~ x1 + poly(x2, degree = i-1), data = sim_data)
+}
+
+train_mse <- c()
+for (i in 1:6){
+  preds <- predict(model_list[[i]], sim_data)
+  train_mse[i] <- mean((sim_data$y - preds)^2)
+}
+
+set.seed(10)
+e<-rnorm(n,0,1)
+y<-1 + x1+x2+e
+
+test_data <- data.frame(x1,x2,y)
+
+test_mse <- c()
+for (i in 1:6){
+  preds <- predict(model_list[[i]], test_data)
+  test_mse[i] <- mean((test_data$y - preds)^2)
+}
+
+bv_trade <- data.frame(model = 1:6, train_mse, test_mse)
+```
+
+```{r}
+bv_trade %>% pivot_longer(!model, values_to = "mse", names_to = "split") %>% ggplot(aes(x = model, y= mse, color = split), size = 1)+geom_line()+theme_bw()
+```
 
 *******************************************************
 
@@ -117,8 +157,65 @@ h. Based on your confidence interval, does Moore's law seem plausible?
 
 ***********************************
 
+a. The scatterplot shows a positive, but non-linear relationship between `Date` and `Transistors`.
+
+```{r}
+ggplot(moore, aes(x = Date, y = Transistors))+geom_point()+theme_bw()
+```
 
 
+b. The model predicts $-12.7 \times 10^7$ transistors in 1970, $10.7 \times 10^8$ transistors in 2000, and $26.3 \times 10^8$ transistors in 2020. The final seems too small, while the first number is negative (an impossibility)! These predictions are unlikely to be accurate.
+
+```{r}
+simple_mod_p2 <- lm(Transistors ~ Date, data = moore)
+
+pred_set <- data.frame(Date = c(1970, 2000, 2020))
+predict(simple_mod_p2, pred_set)
+```
+
+c. Each of the diagnostic plots shows some evidence of problem.
+
+The residual plot shows strong evidence of non-lineary, the qq plot shows significant deviation from Normality in the tails of the distribution, the scale-location plot shows significant pattern to the size and location of residuals, and the leverage plot shows some influential points.
+
+```{r}
+library(gglm)
+gglm(simple_mod_p2)
+```
+
+
+d. If Moore's Law were true, then the relationship between transistors $y$ and date $x$ would take the form
+$$
+y = a 2^{x/2}
+$$
+and so
+
+$$
+\log_2 y = \log_2 a + \frac{1}{2}x
+$$
+which is linear in $x$.
+
+e. The coefficient on Date is 0.5, and indicates that every year the number of transistors increases by approximately 50%. Moreover, this would mean that every 2 years, the number of transistors increases by about 100% (aka the number doubles every two years).
+
+```{r}
+log_mod_p2 <- lm(log2(Transistors) ~ Date, data = moore)
+summary(log_mod_p2)
+```
+
+
+f. The diagnostic plots show that a linear model is significantly more appropriate for the log number of tranistors. There are a few points, however, that appear to have sizable influence.
+
+```{r}
+gglm(log_mod_p2)
+```
+
+
+g. The 95% confidence interval is (0.481, 0.526).
+
+```{r}
+confint(log_mod_p2)
+```
+
+h. The confidence interval does contain the value 0.5, which is slope we would expect to see if Moore's Law were true.
 
 
 ***********************************
@@ -178,7 +275,66 @@ g. Based on your analysis in the previous parts of this question, do you feel th
 
 ***********************************
 
+a. Based on scatterplots and correlation coefficients, we see that `Age`, `FrancePop` and `Year` all have extremely high pairwise correlation. This is not surprising, since age is just 1983 - Year, and the population of France is nearly a linear function of year. 
 
+```{r}
+library(GGally)
+ggpairs(wine)
+```
+
+b. Since Year is perfectly correlated with Age, we remove it. Moreover, since there is no plausible reason the population of France should influence wine price, we remove it as well, and fit the model on remaining variables.
+
+```{r}
+mod_p3 <- lm(Price ~ . - Year - FrancePop, data = wine)
+```
+
+c.
+
+- Every increase in the age of the wine increases its price by 66.6 dollars. 
+- Every increase in mm of Winter rain increases price by 4.67 dollars.
+- Every increase in mm of Harvest rain decreases price by 8.58 dollars.
+- Every increase in average growing temperature (in C) increases price by 1582
+
+The highest value wines are those that are aged the longest, had rainy winters preceding growing season, had dry harvest seasons, and high average temperatures.
+
+```{r}
+summary(mod_p3)
+```
+
+d. The p-value for the F-test was $2.927 \times 10^{-6}$, which is significant at the 0.001 level, and gives good evidence against the hypothesis that there is no linear relationship between predictors and response.
+
+e. The residual standard error was 975.2, and indicates that typically, the true price and the price predicted by the model differed by about 975 dollars. This is optimistic, since it is based on training data, and the corresponding measure would likely be higher on test data.
+
+f. Based on 10-fold cv, the test rmse was $1065.042$ dollars.
+
+```{r}
+set.seed(10)
+library(rsample)
+prob3_cv <- vfold_cv(wine, v= 10)
+```
+
+```{r}
+get_rmse <- function(split){
+  train <- analysis(split)
+  mod <- lm(Price ~ . - Year - FrancePop, data = train)
+  val <- assessment(split)
+  preds <- predict(mod, val)
+  rmse <- sqrt(
+    mean(
+      (val$Price - preds)^2
+    )
+  )
+}
+```
+
+```{r}
+prob3_cv$rmse <- map_dbl(prob3_cv$splits, get_rmse)
+
+mean(prob3_cv$rmse)
+```
+
+
+g. The model diagnostics, F-statistic, adjusted R^2, and rmse all suggest that the model is relatively accurate in predicting the price of a bottle of wine. However, it is worth considering the relationship between price and quality. Without knowing about market efficiency, we do not have a good idea about whether price is a good indication of quality.
 
 
 
@@ -222,8 +378,45 @@ i. Suppose each of the 19 students in our class (and me) independently build a m
 
 ***********************************
 
+a. This is a regression task, since the response variable `weight` is quantitative. This tasks primarily a prediction task, since we are interested in accurately guessing the weight of this particular pumpkin.
 
+b.
+  - Pumpkin height in inches (from base to tip of stem); numeric
 
+  - Pumpkin width in inches (from left to right at widest point); numeric
 
+  - Pumpkin irregularity (spherical, irregular); categorical
+
+  - Color (orange, white, green, multicolored); categorical
+
+  - Wrinkles (few, some, lots); categorical
+
+  - Brightness (dull, moderate, bright); categorical
+
+c.
+
+  - Pumpkin height: larger pumpkins, larger weight
+
+  - Pumpkin width: larger pumpkins, larger weight
+
+  - Pumpkin irregularity: more regular pumpkins, larger weight
+
+  - Color: orange pumpkins, larger weight (no idea)
+
+  - Wrinkles: fewer wrinkles, larger weight
+
+  - Brightness: bright pumpkins, larger weight
+  
+d. We may expect pumpkin height and pumpkin width to be positively correlated. Additionally, we expect pumpkins with height and weight roughly equal to be more regular.
+
+e. Pumpkin color and height may have an interaction effect, since color may indicate subvariety of pumpkin, which may grow at different densities.
+
+f. Pumpkin height likely has a non-linear relationship with weight, since weight depends on the volume of a pumpkin which is often related to the cube of its height.
+
+g. After measuring the weights and values of other predictors for 20 pumpkins at the store, we create 1000 bootstrap samples, build an MLR model on each, compute the MSE for each, and then compute the standard deviation of the collection of MSEs.
+
+h. After measuring the weights and values of other predictors for 20 pumpkins at the store, we can perform k-fold CV for each model to estimate the MSE and compare the results.
+
+i. With only 20 observations, each model is very susceptible to differences between the training set and the population of pumpkins. We are almost certainly better off collecting data on different sets of 20 pumpkins, to effectively boost our sample size.
 
 ***********************************
