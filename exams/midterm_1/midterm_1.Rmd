@@ -53,22 +53,61 @@ library(tidyverse)
 
 Each of the following 4 problems will be worth approximately equal number of points. Compose your answer to each problem between the bars of red stars. Show your work and justify your answers.
 
+
 ## Problem 1
 
- 
+In this problem, you are asked to give an empirical demonstration of the bias-variance tradeoff.
 
-***********************************
+The following code chunk generates 20 data points from a model with formula $y = 1 + x_1 + x_2 + \epsilon$, where $\epsilon \sim N(0,1)$.
+
+```{r}
+set.seed(1010)
+
+n <- 20
+
+x1<-rnorm(n,1,1)
+x2<-rnorm(n,2,1)
+e<-rnorm(n,0,1)
+y<-1 + x1+x2+e
+
+sim_data <- data.frame(x1,x2,y)
+```
 
 
+a) In 2 - 4 sentences, define the bias-variance trade-off and describe why it is an important consideration in statistical modeling. 
 
+b) Create a sequence of at least 5 models of varying flexibility that predict $y$ based on $x_1$ and/or $x_2$ (these models do not need to be linear). Use these models to provide an explicit demonstration of the bias-variance tradeoff by computing MSE on both test and training data. Be sure to explain how your models demonstrate the BV-tradeoff, and support your answer with appropriate graphics.
 
-
-***********************************
 
 ## Problem 2
 
- 
 
+Gordon Moore, co-founder of Intel, conjectured in the 1960s that the processing power of integrated circuits would double roughly every two years, an observation that has seen been codified as "Moore's law."  
+
+The following data set contains transistor counts for CPUs appearing between 1971 and 2015. 
+
+```{r message=FALSE}
+moore <- read_delim("data/moore.csv", ";", 
+    escape_double = FALSE, trim_ws = TRUE)
+```
+
+
+a. Create a scatterplot showing the relationship between the number of `Transistors` and the `Date` the CPU was introduced. Comment on the relationship.
+
+
+b. Create a simple linear model predicting transistors as a function of date, and use your model to predict the number of transistors in 1970, 2000, and 2020. Discuss whether you feel these predictions are accurate.
+
+c. Create the diagnostic plot quartet for the model and discuss any concerns you have with the model based on the plots.
+
+d. Explain why if Moore's law is true, we would expect to see a linear relationship between date and the base-2 logarithm of the number of transistors.
+
+e. Fit a linear model for the base-2 log of `Transistors` and `Date` (hint: the `log2` function computes the base-2 logarithm of a number). What is the coefficient on the slope of this model, and what does it represent in context?
+
+f. Create and analyze the diagnostic plot quarter for this model. Does it appear the conditions for inference are satisfied?
+
+g. Find the $95\%$ confidence interval for the slope of the model. 
+
+h. Based on your confidence interval, does Moore's law seem plausible?
 
 ***********************************
 
@@ -77,31 +116,59 @@ Each of the following 4 problems will be worth approximately equal number of poi
 
 
 ***********************************
+
+
 
 
 
 ## Problem 3
 
-The `Auto` data from the `ISLR` package contains fuel efficiency and other data for a group of 392 vehicles. After loading the data using the following code chunk, run `?Auto` to see the data documentation and `View(Auto)` to skim the data. Your goal in this problem is to investigate the relationship between `mpg` and several of the features in the data set.
+In 1995, Orley Ashenfelter published a study on the quality of Bordeaux wine vintages, which received considerable public attention after disputes with prominent wine critics, as shown in this video from an [ABC interview](https://youtu.be/Ec8hPHLMyzY) (Watching the video is not necessary to solve this problem; however, it is only 5 minutes long, and don't need to count time spent watching the video towards your overall exam time).
 
-```{r}
-library(ISLR)
-data(Auto)
+Red Bordeaux wines are produced in the Bordeaux region of France, one of the most well-known wine growing regions in the world, and often command a high price. However, the quality of wines from this region may vary considerably due to many factors, including weather conditions.
+
+In this problem, you will reproduce some of Ashenfelter's analysis to predict the quality of a Bordeaux vintage.
+
+Load the data with the following code:
+
+```{r message = F}
+wine <- read_csv("data/wine.csv")
 ```
 
+The data includes measurements of the following variables on 27 wines:
 
-a. Create appropriate visualizations comparing `mpg` to `weight`, `cylinders` and `horsepower`. Additionally, create graphics showing the individual distribution of each predictor and the response.
+- Year: year in which grapes were harvested to make wine.
 
-b. Suppose you are interested in estimating the standard deviation of the parameter on `cylinders` in a multiple regression model predicting `mpg` based on `weight`, `cylinders` and `horsepower`. Write an algorithm to create a 1000 bootstrap samples of the `cylinders` estimate.
+- Price: the average market price for Bordeaux vintages in dollars, based on 1990–1991 auctions.
+    
+- WinterRain: winter rainfall (in mm).
+    
+- AGST: Average Growing Season Temperature (in Celsius degrees).
+    
+- HarvestRain: harvest rainfall (in mm).
+    
+- Age: age of the wine measured as the number of years stored in a cask.
+    
+- FrancePop: population of France at Year (in thousands).
 
-c. Plot the distribution of your bootstrap estimates, compute the standard error of the statistic, and find the 95% confidence interval for the value of the parameter.
+In this problem, you will use `Price` as a surrogate measure for the quality of a wine.
+
+a. Create scatterplots and compute correlations for all pairs of variables in the `wine` data (hint: use `GGally`). Identify pairs of variables that have especially strong linear relationships, and give a context-based explanation for why these variables may be strongly correlated.
 
 
-d. Fit a multiple regression model predicting `mpg` based on `weight`, `cylinders` and `horsepower`. How does the standard error listed in the `summary` table compare to the standard error you computed in the previous part?
+b. Fit a multilinear model to predict `Price` as a function of **at least 2** predictors. Briefly explain why you chose to include / exclude the predictors you did.
 
-e. Fit 6 more linear models, one for each subset of predictors from the list of: `weight`, `cylinders`, `horsepower`. 
+c. Interpret the coefficients in your model. What type of conditions lead to the highest quality wine?
 
-f. Use 5-fold cross-validation to compute error rates for each of the 7 models in parts d and e. Which model has the lowest CV error?
+d. What is the p-value for the F-test for your linear model? What are the null and alternative hypotheses for the associated hypothesis test? What does the particular p-value you obtained indicate about your linear model?
+
+
+e. What are the values of the residual standard error for your linear model? Do you expect this number to be equal to, greater than, or less than the corresponding value calculated on a test set? Explain.
+
+f. Perform $10$-fold cross-validation to estimate the root mean-squared error of your model.
+
+g. Based on your analysis in the previous parts of this question, do you feel that the **quality** of a Bordeaux wine can be accurately predicted based on weather? Answer in 3 - 5 sentences.
+
 
 ***********************************
 
@@ -125,7 +192,7 @@ include_graphics("img/pumpkin_comp.jpg")
 
 Your task to describe a process for building a model to win this competition, using only the photo below (for reference, the Bon Appetit floor tiles ares 12" x 12"). You cannot directly weigh the pumpkin in this picture, but you may assume you can go to the store to measure and weigh other pumpkins. *(Of course, I don't actually expect you to build a model for this midterm and/or to actually go to the store to weigh pumpkins, although you are welcome to do so after the exam in order to actually win the competition!)*
 
-```{r}
+```{r out.width = "90%", fig.align = "center"}
 include_graphics("img/pumpkin.jpg")
 ```
 
