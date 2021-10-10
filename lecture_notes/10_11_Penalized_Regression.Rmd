@@ -1,0 +1,282 @@
+---
+title: "Penalized Regression"
+author: "Nate Wells"
+date: "October 11th, 2021"
+institute: "Math 243: Stat Learning"
+fontsize: 9pt
+output: 
+  beamer_presentation:
+    includes:
+      in_header: preamble.tex    
+graphics: yes    
+    
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = FALSE,
+	fig.align = "center",
+	message = FALSE,
+	cache = F,
+	fig.width = 6,
+	fig.height = 4,
+	warning = FALSE,
+	out.width = "70%"
+)
+library(tidyverse)
+library(knitr)
+library(ggthemes)
+library(ISLR)
+```
+
+## Outline
+
+In today's class, we will...
+
+ 
+- Investigate the relationship between coefficient size and variance in linear models
+
+- Discuss penalized regression models as means of improving MSE of linear models
+
+
+
+# Penalized Regression
+
+## Motivation
+
+- Recall, for SLR, $\hat \beta_0, \hat \beta_1$ are given by
+
+$$
+\hat \beta_1 = \frac{\sum_{i=1}^n(x_i - \bar x)(y_i - \bar y)}{\sum_{i=1}^n(x_i - \bar x)^2} \qquad \hat \beta_0 = \bar y - \hat \beta_1 \bar x
+$$
+  
+  \pause
+
+- Under the standard assumptions, the coefficients produced by least squares regression are unbiased.
+
+\pause
+
+- That is, if the true relationship between $Y$ and $X$ is linear $Y = \beta_0 + \beta_1 X + \epsilon$, then
+$$
+E[ \hat \beta_0] = \beta_0 \qquad E[\hat \beta_1 ] = \beta_1
+$$
+\pause
+- Moreover, among all **unbiased** linear models, the least squares model has the lowest variance.
+
+\pause
+
+- Does this mean that the least squares model has the lowest MSE among all linear models?
+
+  \pause
+  
+  - No! MSE is a combination of bias and variance. 
+  
+  - It is possible that small *increase* in bias, can correspond to large *decrease* in variance.
+ 
+## Shrinking Coefficients
+
+- Suppose the true relationship between $Y$ and $X_1, X_2$ is given by $$Y =1 + X_1 + 5 X_2 + \epsilon  \quad \epsilon \sim N(0,1).$$
+
+- Let $\hat \beta_0, \hat \beta_1, \hat \beta_2$ be the model coefficient estimates given by least squares regression. Which of the following models has higher variance in predictor estimates? Higher bias?
+
+  \pause
+
+\begin{align*}
+\textrm{Model 1:}   \quad   \hat y =& \hat \beta_0 + \hat \beta_1 x_1 + \hat \beta_2 x_2\\
+\textrm{Model 2:}   \quad  \hat y =& \hat \beta_0 + 0.97\cdot \hat \beta_1  x_1 +  0.98 \cdot \hat \beta_2  x_2 
+\end{align*}
+  
+\pause
+
+- Model 2 has higher bias, but lower variance.
+
+## A Linear Model
+
+- Consider the following training data for the model: $Y = 1 + X_1 + 5 X_2 + \epsilon  \quad \epsilon \sim N(0,1)$
+
+```{r}
+set.seed(100)
+x1 <- runif(20,0,1)
+x2 <- 2 - 2*x1 + rnorm(20, 0, .3)
+e<- rnorm(20,0,1)
+y<- 1 + x1 + 5*x2 + e
+sim_data <- data.frame(x1,x2,y)
+```
+
+```{r echo = F, eval = F}
+summary(lm(y~x1+x2, data = sim_data))
+cor(x1,x2)
+```
+
+```{r fig.height=3.5}
+ggplot(data = sim_data, aes(x = x1, y  = x2, color = y))+geom_point()+theme_bw()+labs(title = "20 training observations")
+```
+\pause
+
+- What are some likely problems with the MLR model?
+
+## Bias-Variance in Least Squares
+
+- Using least squares, the model estimates are
+$$
+\hat Y = -0.5  + 2.8 X_1 +5.8 X_2
+$$
+\pause
+
+- Let's consider variance and bias for estimate $Y$ when $X_1 = 0.25$ and $X_2 = .5$.
+
+  \pause
+  
+  - Using the true model, the expected value of $Y$ is
+$$
+Y =1 + X_1 + 5 \cdot X_2 = 1 + 0.25 + 5 \cdot 0.5 = 3.75
+$$
+
+  \pause
+  
+  - Using the least squares model from training data, the predicted value of $Y$ is
+$$
+Y = -0.5  + 2.8 X_1 + 5.8 X_2 = -0.5  + 2.8 \cdot 0.25 + 5.8 \cdot 0.5 = 3.1
+$$
+
+\pause
+
+- But how will the predicted value change if we repeat across 5000 simulations from the model?
+
+
+## Simulation
+
+\small
+
+```{r echo = T}
+set.seed(1011)
+test_point <- data.frame(x1 = 0.25, x2 = .5)
+
+trials<-5000
+prediction <- rep(NA, trials)
+for (i in 1:trials){
+  e<- rnorm(20,0,1)
+  y<- 1 + x1 + 5*x2 + e
+  sim_data <- data.frame(x1,x2,y)
+  mod <- lm(y ~ x1 + x2, data = sim_data)
+  prediction[i] <- predict(mod, test_point)
+}
+
+simulation <- data.frame(trial_num = 1:trials, prediction)
+```
+
+
+## Prediction Distribution
+
+```{r fig.height = 3.5}
+simulation %>% 
+  ggplot(aes(x = prediction))+geom_histogram( color = "white", fill = "steelblue")+theme_bw()+geom_vline(xintercept = 3.75, color = "red", size = 1)+geom_vline(xintercept = 3.78, color = "blue", size = 1)+labs(title = "Distribution of Predictions across 5000 simulations")+annotate(geom = "text", x = 2.5, y = 500, label = "True Value", color = "red")+annotate(geom = "text", x = 5.5, y = 500, label = "Average Prediction", color = "blue")
+```
+\pause
+
+\small
+
+```{r echo = T}
+simulation %>% summarize(
+  mean = mean(prediction), variance = var(prediction))
+```
+
+## A Shrunken Model
+
+- Now suppose we use the model algorithm
+$$
+\hat y =  \hat \beta_0 + 0.97 \cdot \hat \beta_1 x_1 + 0.98\cdot \hat \beta_2  x_2 
+$$
+
+- Since $\hat \beta_0, \hat \beta_1, \hat \beta_2$ are unbiased, then the expected prediction for $Y$ when $X_1 = 0.25$ and $X_2 = 0.5$ is
+$$
+E[\hat y] = \beta_1 + 0.97 \cdot \beta_1 x_1 + 0.98 \cdot \beta_2 x_2 = 1 + 0.97  \cdot 0.25 +0.98 \cdot 5 \cdot 0.5 = 3.69
+$$
+
+\pause
+
+- Based on the first simulation, the model estimate is
+$$
+\hat Y = -0.5  +  0.97 \cdot 2.8 X_1 + 0.98 \cdot 5.8 X_2    = -0.5 + 2.71 X_1 + 5.68 X_2
+$$
+
+\pause
+
+- And the prediction when $X_1 = 0.25$ and $X_2 = 0.5$ is
+$$
+\hat y =  -0.5 + 2.71 X_1 + 5.68 X_2  =    -0.5 + 2.71  \cdot 0.25 + 5.68 \cdot 0.5 = 3.525
+$$
+
+
+## Simulation II
+
+\small
+
+```{r echo = T}
+set.seed(1001)
+
+trials<-5000
+prediction2 <- rep(NA, trials)
+for (i in 1:trials){
+  e<- rnorm(20,0,1)
+  y<- 1 + x1 + 5*x2 + e
+  sim_data <- data.frame(x1,x2,y)
+  mod <- lm(y ~ x1 + x2, data = sim_data)
+  b0 <- 1*coef(mod)[1]
+  b1 <- .97*coef(mod)[2]
+  b2 <- .98*coef(mod)[3]
+  prediction2[i] <- b0 + b1*0.25 + b2*0.5
+}
+
+simulation2 <- data.frame(trial_num = 1:trials, prediction2)
+```
+
+## Prediction Distribution
+
+```{r fig.height = 3.5}
+simulation2 %>% 
+  ggplot(aes(x = prediction2))+geom_histogram( color = "white", fill = "steelblue")+
+  theme_bw()+
+  geom_vline(xintercept = 3.75, color = "red", size = 1)+
+  geom_vline(xintercept = 3.65, color = "blue", size = 1)+
+  labs(title = "Distribution of Predictions across 5000 simulations")+
+  annotate(geom = "text", x = 1.5, y = 500, label = "Average Prediction", color = "blue")+
+  annotate(geom = "text", x = 5.5, y = 500, label = "True Value", color = "red")
+```
+\pause
+
+\small
+
+```{r echo = T}
+simulation2 %>% summarize(
+  mean = mean(prediction2), variance = var(prediction2))
+```
+
+## Model Comparison
+
+- True relationship: $Y = 1 + X_1 + 5 X_2 + \epsilon$
+
+\pause
+
+- Model 1: $\hat y =  \hat \beta_0 + \hat \beta_1 x_1 + \hat \beta_2 x_2$
+
+
+```{r echo = F}
+simulation %>% summarize(
+  mean = mean(prediction), variance = var(prediction), avg_error = mean((prediction -3.75)^2))
+```
+
+\pause
+
+
+- Model 2: $\hat y = \hat \beta_0 + 0.97\cdot \hat \beta_1  x_1 +  0.98 \cdot \hat \beta_2  x_2$
+
+```{r echo = F}
+simulation2 %>% summarize(
+  mean = mean(prediction2), variance = var(prediction2),avg_error = mean((prediction2 -3.75)^2))
+```
+
+\pause
+
+- It looks like the model with smaller coefficients actually performed better!
