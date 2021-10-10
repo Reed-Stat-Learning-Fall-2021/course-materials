@@ -72,7 +72,7 @@ $$
   
   - No! MSE is a combination of bias and variance. 
   
-  - It is possible that small *increase* in bias, can correspond to large *decrease* in variance.
+  - It is possible that a small *increase* in bias can correspond to large *decrease* in variance.
  
 ## Shrinking Coefficients
 
