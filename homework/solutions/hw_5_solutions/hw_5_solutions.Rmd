@@ -157,6 +157,7 @@ In this section, compare the results of your models by computing appropriate met
 Below are the predictor inclusion plot, ranked by size of each metric. Not surprisingly, we see that BIC tends to favor models with fewer variables than either Cp or Adjusted $R^2$.
 
 ```{r}
+par(mfrow=c(1,3))
 plot(back_elim, scale = "adjr2")
 plot(back_elim, scale = "Cp")
 plot(back_elim, scale = "bic")
@@ -277,9 +278,12 @@ These functions should be self-contained, so include any packages you need or da
 ```{r}
 #This function creates your linear model. I will apply it to the results of FirstName_LastName_processing(house_train)
 
-FirstName_LastName_model <- function(training_data){ 
+Nate_Wells_model <- function(training_data){ 
   library(tidyverse)     ## Load whatever packages you need
-  my_mod <- lm(Sale_Price ~ 1, data = training_data)    ## Create your model. Replace 1 with your actual model formula. Do not replace "training_data"
+  my_mod <- lm(Sale_Price ~ Lot_Frontage + Lot_Area + Year_Built + Year_Remod_Add + 
+    Mas_Vnr_Area + BsmtFin_SF_2 + Bsmt_Unf_SF + Total_Bsmt_SF + 
+    Gr_Liv_Area + Bedroom_AbvGr + Kitchen_AbvGr + Garage_Area + 
+    Wood_Deck_SF + Screen_Porch + Latitude, data = training_data)    ## Create your model. Replace 1 with your actual model formula. Do not replace "training_data"
   my_mod      ##return your model as output
 }
 ```
@@ -290,7 +294,7 @@ FirstName_LastName_model <- function(training_data){
 # I will apply it to the results of FirstName_LastName_processing(house_test) and FirstName_LastName_model(house_train)
 
 
-FirstName_LastName_predictions <- function(model, test_data){ 
+Nate_Wells_predictions <- function(model, test_data){ 
   library(tidyverse)     ## Load whatever packages you need
   my_preds <- predict(model, test_data)   ## Make predictions based on your model. Don't change this line.
   my_preds      ##return your predictions as output
@@ -325,7 +329,9 @@ Consider the highly correlated predictors you identified in the first component.
 
 ******************************************
 
+Of the pairs of predictors identified in the first component, only `Gr_Liv_Area` and `Second_Flr_SF` both appeared in the final model (among other pairs, at most one of the predictors appeared). It's not surprising that pairs do not appear, since C_p, adjusted R2, and BIC all penalize additional predictors which do not appreciably decrease RSS (which would happen if a variable is added which is highly correlated with another).
 
+However, `Gr_Liv_Area` was the single most important predictor, and so `Second_Flr_SF` may add enough information to the model to warrant its inclusion alongside `Gr_Liv_Area`.
 
 
 

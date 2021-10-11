@@ -65,8 +65,26 @@ Do these relationships look strong/weak? Linear/non-linear? Does it seem like a 
 ******************************************
 
 
+```{r}
+ggplot(house, aes(x = Sale_Price))+geom_histogram(color  = "white")
 
+ggplot(house, aes(x = log(Sale_Price)))+geom_histogram(color  = "white")
+```
 
+```{r}
+ggplot(data = house, aes(x = Year_Built, y = Sale_Price))+geom_point()+geom_smooth(method = "lm", color = "blue")+geom_smooth(color = "red")
+```
+
+```{r}
+simple_mod <- lm(Sale_Price ~ Year_Built, data = house)
+plot(simple_mod)
+
+simple_log_mod <- lm(log(Sale_Price)~ Year_Built, data = house)
+plot(simple_log_mod)
+
+simple_q_mod <- lm( Sale_Price ~ poly(Year_Built, degree = 2), data = house)
+plot(simple_q_mod)
+```
 
 ******************************************
 
