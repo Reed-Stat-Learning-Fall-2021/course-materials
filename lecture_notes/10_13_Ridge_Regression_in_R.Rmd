@@ -1,0 +1,522 @@
+---
+title: "Ridge Regression in R"
+author: "Nate Wells"
+date: "October 13th, 2021"
+institute: "Math 243: Stat Learning"
+fontsize: 9pt
+output: 
+  beamer_presentation:
+    includes:
+      in_header: preamble.tex    
+graphics: yes    
+    
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = FALSE,
+	fig.align = "center",
+	message = FALSE,
+	cache = F,
+	fig.width = 6,
+	fig.height = 4,
+	warning = FALSE,
+	out.width = "70%"
+)
+library(tidyverse)
+library(knitr)
+library(ggthemes)
+library(ISLR)
+```
+
+## Outline
+
+In today's class, we will...
+
+ 
+- Implement Ridge Regression in R
+
+
+# Ridge Regression in R
+
+## Ridge Regression
+
+- To perform **Ridge Regression**, we find coefficients $\beta$ in the linear model that minimize
+$$
+\textrm{RSS} + \lambda \sum_{i = 1}^p \beta_i^2 \qquad \textrm{where }  \lambda \geq 0 \textrm{ is tuning parameter}
+$$
+
+\pause
+
+- The term $\lambda \sum_{i = 1}^p \beta_i^2$ is the **shrinkage penalty**, and is small when the $\beta$ are small.
+
+\pause
+
+- With a shrinkage penalty, the algorithm prefers models with lower coefficients.
+
+\pause
+
+- This tends to reduce variance, at the cost of increased bias.
+
+
+## Effect of Scale
+
+- Suppose $\hat{y} = 1 + 0.01 x_1 + 20 x_2$ is the best fitting linear model for $Y$ using $X_1$ and $X_2$, and that both are statistically significant.
+  
+  \pause
+  
+  - Are we justified in saying that $X_2$ is a more important predictor than $X_1$?
+  
+  \pause
+
+  - What if $\mathrm{sd}(x_1) = 10000$ and $\mathrm{sd}(x_2) = .1$? 
+  
+- Suppose we first standardize $X_1$ and $X_2$ by subtracting off their means and dividing by their standard deviations:
+  $$
+  Z_1 = \frac{X_1 - \mu_1}{\sigma_1} \qquad Z_2 = \frac{X_2 - \mu_2}{\sigma_2}
+  $$
+  
+\pause
+  
+- If we build a model and find $\hat{y} = 1 + 0.01 z_1 + 20 z_2$, where $Z_1$ and $Z_2$ are standardized, are we now justified in saying that $Z_2$ is more important than $Z_1$?
+  
+  \pause
+  
+  - Assuming both are statistically significant, we are probably justified.
+  
+  
+  
+## Scale
+
+- The coefficients in the least squares regression equation are **scale-equivalent**
+
+  \pause
+  
+  - That is, scaling a predictor by a value $c$ just leads to scaling the estimate by $1/c$. 
+  
+  \pause
+  
+  - The predicted value is the same, regardless of scale.
+  
+  \pause
+  
+  - Therefore, rescaling predictors *does not* change the fit of the model (RSS is the same)
+  
+  \pause
+
+  - Suppose $y = 1 + 0.01 x_1 + 20 x_2$, $\sigma_1 = 10000, \sigma_2 = 0.1$, and both $x_1, x_2$ have mean $0$.
+  
+  - After rescaling, $z_1 = \frac{x_1}{10000}, z_2 = \frac{x_2}{0.1}$ and the linear model is
+$$
+y = 100z_1 + 2z_2
+$$
+
+- However, for Ridge Regression, coefficient estimates can change depending on scale.
+
+  \pause
+  
+  - Recall the shrinkage penalty is $\lambda \sum_{i =1}^2 \beta_i^2 = \lambda(0.01^2 + 20^2)$
+  
+  \pause
+  
+  - Which models will ridge regression favor?
+  
+\pause
+
+- Ridge regression is most effective if predictors are standardized first. 
+
+## Solubility
+
+The `solubility` data set from the `AppliedPredictiveModeling` package contains solubility and chemical structure for a sample of 1,267 different compounds.
+
+  - But suppose we only have a fraction of the data to work with...
+
+\pause
+
+\small
+
+```{r echo = T}
+set.seed(1013)
+library(AppliedPredictiveModeling)
+data(solubility)
+solTest <- data.frame(solTestX, Solubility = solTestY) %>% sample_frac(.3)
+solTrain <- data.frame(solTrainX, Solubility =  solTrainY) %>% sample_frac(.3)
+solTest <- solTest %>% dplyr::select(!starts_with("FP"))
+solTrain <- solTrain %>%  dplyr::select(!starts_with("FP"))
+```
+
+\pause
+
+\normalsize
+
+- Our goal is to predict solubility using the 20 chemical structure attributes. 
+
+## Multicollinearity
+
+- Recall that several predictors were very strongly correlated
+
+  - We even removed several from our linear model because of they were completed determined by the values of other variables (`NumNonHBonds` `NumHydrogen` `NumRings` )
+  
+```{r}
+library(gridExtra)
+g1<-ggplot(solTrain, aes(x = NumBonds, y = NumAtoms))+geom_point(alpha = .25)+theme_bw()
+
+g2<-ggplot(solTrain, aes(x = SurfaceArea1, y = SurfaceArea2))+geom_point(alpha = .25)+theme_bw()
+
+g3<-ggplot(solTrain, aes(x = NumNonHAtoms, y = NumNonHBonds))+geom_point(alpha = .25)+theme_bw()
+
+g4<-ggplot(solTrain, aes(x = NumHalogen, y = NumChlorine))+geom_point(alpha = .25)+theme_bw()
+
+grid.arrange(g1,g2,g3,g4, ncol = 2)
+```
+
+## Feature Selection
+
+- Previously, we used `regsubsets` from the `leaps` package to choose the best model:
+
+\small
+
+```{r echo = T}
+best15 <-lm(Solubility ~.-NumNonHBonds -NumHydrogen -NumRings 
+            -NumNitrogen -NumOxygen, 
+            data = solTrain)
+```
+
+\pause
+
+\normalsize
+
+- And computed the MSE of the model on test data
+
+\small
+
+```{r echo = T}
+preds <- predict(best15, solTest)
+data.frame(
+  mse = mean((solTest$Solubility - preds)^2)
+  )
+```
+
+## Variable Importance
+
+
+- The summary table suggests most variables have very significant p-value.
+
+\tiny
+
+```{r}
+summary(best15)
+```
+
+## Rescaling a Data Frame
+
+- We can use the `scale` function in R to standardize every column of a data frame:
+
+\small
+
+```{r echo = T}
+std_solTrain <- scale(solTrain) %>% as.data.frame()
+```
+
+\pause
+
+\normalsize
+
+- A quick verification:
+
+\pause
+
+```{r fig.width=8}
+g1 <- ggplot(solTrain, aes(x = Solubility))+geom_histogram(color = "white")+labs(title = "Solubility in solTrain")+theme_bw()
+g2<-ggplot(std_solTrain, aes(x = Solubility))+geom_histogram(color = "white")+labs(title ="Solubility in std_solTrain")+theme_bw()
+grid.arrange(g1,g2, ncol = 2)
+```
+
+\footnotesize
+
+```{r}
+rbind(solTrain %>% 
+        summarize(mean_sol = round(mean(Solubility), 3), 
+                  sd_sol =  round(sd(Solubility), 3)),
+      std_solTrain %>% 
+        summarize(mean_sol = round(mean(Solubility), 3), 
+                  sd_sol =  round( sd(Solubility),3) ) ) %>%
+        mutate(df = c("solTrain", "std_solTrain")) %>% 
+         dplyr::select(df, everything())
+
+```
+
+## Scaled Model Coefficients
+
+- Some coefficients are still relatively large (possibly because of collinearity)
+
+\tiny
+
+```{r}
+std_best15 <- lm(Solubility ~.-NumNonHBonds -NumHydrogen -NumRings
+            -NumNitrogen -NumOxygen, 
+            data = std_solTrain)
+summary(std_best15)
+```
+
+## Ridge Regression Preparation
+
+- In order to use ridge regression, we need to separate our training data into a predictor matrix and a response vector:
+
+\small
+
+\pause
+
+
+```{r echo = T}
+x<-model.matrix(Solubility ~., data = solTrain)[,-1]
+y<-solTrain$Solubility
+```
+\pause
+
+\normalsize
+
+- The `model.matrix` function creates a `matrix` of predictors and converts all categorical variables to dummy variables
+
+- The `[,-1]` code selects all columns of the model matrix except the 1st (which corresponds to the intercept)
+
+\pause
+
+- We also create vector `grid` of suitable tuning parameters $\lambda$.
+
+\small
+
+```{r echo = T}
+grid = 10^(seq( -5, 5, length = 100))
+head(grid)
+```
+
+\pause
+\normalsize
+
+- The grid of values should be changed depending on the problem at hand.
+
+## The `glmnet` package
+
+- We use the `glmnet` function in the `glmnet` package in order to perform Ridge Regression for a variety of values of the tuning parameter $\lambda$.
+
+\pause
+\small
+
+```{r echo = T}
+library(glmnet)
+ridge_mod <- glmnet(x, y, alpha = 0, lambda = grid)
+```
+
+\pause
+
+\normalsize
+
+
+- The `alpha` argument in `glmnet` determines the type of penalty
+  
+  - `alpha = 0` corresponds to Ridge Regression. `alpha = 1` corresponds to LASSO (Friday's class)
+
+\pause
+
+- By default, `glmnet` standardizes observations. To use unstandardized observations, add `standardize = FALSE`
+
+\pause
+
+- Here, we gave a specific range of values for the tuning parameter. But if no `lambda` value is supplied, the function will automatically select a range.
+
+\pause
+
+- Remember! `x` needs to be the model matrix and `y` needs to be the response vector. `glmnet` does not use the `formula` syntax of `lm`.
+
+## Understanding output of `glmnet`
+
+- Applying `coef` to the `glmnet` object gives a matrix of regression coefficients
+
+  - one column for each value of lambda and one row for each predictor (and intercept)
+
+\pause
+
+\normalsize
+
+- An example of several rows and columns:
+
+\tiny 
+```{r}
+options(digits=3) 
+```
+
+```{r echo = T}
+coef(ridge_mod)[1:5,1:6]
+coef(ridge_mod)[1:5,95:100]
+```
+
+## Understanding output of `glmnet`
+
+- In `coef`, columns are labeled by index of lambda (i.e. $s_0$, $s_1$, $s_2$). The actual values of lambda are stored in `ridge_mod$lambda`
+
+\tiny
+
+```{r echo = T, eval = F}
+ridge_mod$lambda
+```
+
+
+```{r echo = F, eval = T}
+ridge_mod$lambda[1:20]
+```
+
+\pause
+
+\normalsize
+
+- To find a particular value of lambda (i.e. $s_{17}$), subset the vector:
+
+\pause
+
+\tiny
+
+```{r echo = T}
+ridge_mod$lambda[17]
+```
+\pause
+
+\normalsize
+
+- And to get the corresponding model, subset columns of the coef matrix:
+
+\pause
+
+\tiny
+
+```{r echo = T}
+coef(ridge_mod)[,17]
+```
+
+## Coefficient Size
+
+- What happens to coefficient size as $\lambda$ changes?
+
+\pause
+
+\small
+
+```{r echo = T}
+plot(ridge_mod, xvar = "lambda")
+```
+## `ggplot2` for `glmnet`
+
+- A better plot using the `broom` package to `tidy` the output of `glmnet` for `ggplot2`:
+
+\pause
+
+\footnotesize
+
+```{r echo = T, fig.width = 9, fig.height = 5}
+library(broom)
+tidied <- tidy(ridge_mod) %>% filter(term != "(Intercept)")
+ggplot(tidied, aes(lambda, estimate, group = term, color = term)) +
+    geom_line() + scale_x_log10()+ theme_bw()+labs(title = "Coefficent estimates")
+```
+
+## Penalized Regression Performance
+
+- Which values of lambda produce best model? $\lambda = 0.001, 1, 1000$?
+
+\pause
+
+- The `glmnet` function already fit models, so we just need to make predictions:
+
+\pause
+
+\small
+
+```{r echo = T}
+x_tst <- model.matrix(Solubility ~., data = solTest)[,-1]
+preds<- predict(ridge_mod, s = c(0.001, 1, 1000), newx = x_tst) %>% as.data.frame()
+head(preds)
+```
+
+\pause
+
+```{r echo=T}
+get_mse <- function(x){mean((solTest$Solubility-x)^2)}
+preds %>% summarize(across(everything(), get_mse) )
+```
+
+\pause
+
+- But how do we find the **best** value of $\lambda$?
+
+## Cross Validation and `glmnet`
+
+- We use the `cv.glmnet` function to perform cross-validation to compare MSE across all values of $\lambda$
+
+\pause
+
+\footnotesize
+
+```{r echo = T, out.width = "60%"}
+set.seed(1010)
+my_cv<-cv.glmnet(x, y, alpha = 0, lambda = grid, nfolds = 10)
+plot(my_cv)
+```
+
+## Best Lambda 
+
+- The `cv.glmnet` object records the value of lambda that...
+  
+  - Has minimum error (`lambda.min`)
+  
+  - Is largest with error within 1 st. dev of minimum error (`lambda.1se`)
+  
+  \pause
+  
+  - Why is `lambda.1se` useful?
+
+\pause
+
+
+```{r echo=T}
+best_L<-my_cv$lambda.min
+best_L
+reg_L <-my_cv$lambda.1se
+reg_L
+```
+
+
+## Better Plots
+
+- As before, we can obtain a better plot using `broom`
+
+\footnotesize
+
+```{r echo = T, out.width = "65%"}
+tidied <- tidy(my_cv)
+ggplot(tidied, aes(x = lambda, y = estimate))+geom_point( color = "red")+
+  scale_x_log10()+theme_bw()+labs(y = "MSE")+
+  geom_vline(xintercept = best_L, linetype = "dashed" )+
+  geom_vline(xintercept = reg_L, linetype = "dashed")
+```
+
+## Overall Performance
+
+- Let's compare performance for: the full model, the best 15 model, ridge regression with $\lambda =$ `r best_L`, and ridge regression with $\lambda =$ `r reg_L`.
+
+\pause
+
+\footnotesize
+
+```{r echo = T}
+full_mod <- lm(Solubility ~ ., data = solTrain)
+preds <- data.frame(
+  full = predict(full_mod, solTest),
+  best_15 = predict(best15, solTest),
+  rr_min = c(predict(ridge_mod, s = best_L, newx = x_tst)),
+  rr_1se = c(predict(ridge_mod, s = reg_L, newx = x_tst))
+)
+preds %>% summarize(across(everything(),get_mse)) 
+```
+
+- Ridge Regression wins!

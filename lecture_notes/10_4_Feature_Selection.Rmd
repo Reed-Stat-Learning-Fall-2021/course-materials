@@ -562,7 +562,7 @@ metrics %>% pivot_longer(!c(model, method), names_to =  "var", values_to =  "val
 mod5 <-lm(Solubility ~ NumNonHAtoms + NumBonds + NumRotBonds+ NumNitrogen + NumOxygen  , data = solTrain)
 mod9 <-lm(Solubility ~ MolWeight + NumBonds + NumMultBonds+ NumRotBonds + NumAromaticBonds + NumNitrogen + NumOxygen + NumChlorine + SurfaceArea2  , data = solTrain)
 mod15 <-lm(Solubility ~.-NumNonHBonds -NumHydrogen -NumRings - NumNitrogen - NumOxygen , data = solTrain)
-mod17 <-lm(Solubility~. -.-NumNonHBonds -NumHydrogen -NumRings  , data = solTrain)
+mod17 <-lm(Solubility~. -NumNonHBonds -NumHydrogen -NumRings  , data = solTrain)
 ```
 
 - We'll build each model on the training data, and then compute MSE on the test data.
