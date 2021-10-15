@@ -1,0 +1,491 @@
+---
+title: "Ridge Regression in R"
+author: "Nate Wells"
+date: "October 15th, 2021"
+institute: "Math 243: Stat Learning"
+fontsize: 9pt
+output: 
+  beamer_presentation:
+    includes:
+      in_header: preamble.tex    
+graphics: yes    
+    
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = FALSE,
+	fig.align = "center",
+	message = FALSE,
+	cache = F,
+	fig.width = 6,
+	fig.height = 4,
+	warning = FALSE,
+	out.width = "70%"
+)
+library(tidyverse)
+library(knitr)
+library(ggthemes)
+library(ISLR)
+library(ggforce) 
+```
+
+## Outline
+
+In today's class, we will...
+
+ 
+- Discuss LASSO as a method of penalized regression AND variable selection
+
+
+ 
+# The LASSO
+
+## Metrics on $R^p$
+
+How can we measure the distance of a point $x = (x_1, \dots, x_p) \in \mathbb R^p$ from the origin?
+
+\pause
+
+- A natural measurement is the Euclidean distance (i.e. the Pythagorean formula), or the $\ell_2$ norm:
+$$
+\Vert x\Vert_2 = \sqrt{x_1^2 + \dots + x_p^2} = \sqrt{ \sum_{i =1}^p x_i^2}
+$$
+
+\pause
+
+- An alternative measurement is to use the sum of magnitudes of the coordinates (called the taxi-cab metric), or the $\ell_1$ norm:
+
+$$
+\Vert x\Vert_1 = |x_1| + \dots + |x_p| = \sum_{i =1}^p |x_i|
+$$
+\pause
+
+- Sometimes, its useful to consider the  $\ell_0$ "norm" and $\ell_\infty$ norm
+
+$$
+\Vert x \Vert_0= \# (x_i \neq 0) \qquad \Vert x \Vert_\infty = \max |\beta_i|
+$$
+
+## Geometric Perspective
+
+\columnsbegin
+
+\column{.65 \textwidth}
+
+```{r out.width = "100%"}
+ggplot(data = data.frame( x = c(0,3), y = c(0,4), name = c("Origin", "beta")),  aes(x = x, y = y, label = name) )+
+  geom_point(size =2 ) +
+  geom_text( parse = T, nudge_x = .25, nudge_y = .25, size = 5)+
+  theme_bw()+
+  coord_fixed()+
+  scale_x_continuous(limits = c(0,5), minor_breaks = NULL)+
+  scale_y_continuous(limits = c(0,5), minor_breaks = NULL)+
+  labs(x = expression(beta[0]), y = expression(beta[1]), parse = T) 
+```
+
+
+\column{.35 \textwidth}
+
+\columnsend
+
+
+
+## Geometric Perspective
+
+\columnsbegin
+
+\column{.65 \textwidth}
+
+```{r out.width = "100%"}
+ggplot(data = data.frame( x = c(0,3), y = c(0,4), name = c("Origin", "beta")),  aes(x = x, y = y, label = name) )+
+  geom_point(size =2 ) +
+  geom_text( parse = T, nudge_x = .25, nudge_y = .25, size = 5)+
+  theme_bw()+
+  coord_fixed()+
+  scale_x_continuous(limits = c(0,5), minor_breaks = NULL)+
+  scale_y_continuous(limits = c(0,5), minor_breaks = NULL)+
+  labs(x = expression(beta[0]), y = expression(beta[1]), parse = T)+
+  geom_line(size = 1, color = "red")
+```
+
+
+\column{.35 \textwidth}
+
+- \color{red}{$\Vert \beta \Vert_2 = \sqrt{3^2 + 4^2} = 5$}
+
+\color{white}{thing}
+
+\color{white}{thing}
+
+\columnsend
+
+
+## Geometric Perspective
+
+\columnsbegin
+
+\column{.65 \textwidth}
+
+```{r out.width = "100%"}
+ggplot(data = data.frame( x = c(0,3), y = c(0,4), name = c("Origin", "beta")), aes(x = x, y = y, label = name))+
+  geom_point(   size =2 ) +
+  geom_text( parse = T, nudge_x = .25, nudge_y = .25, size = 5)+
+  theme_bw()+
+  coord_fixed()+
+  scale_x_continuous(limits = c(0,5), minor_breaks = NULL)+
+  scale_y_continuous(limits = c(0,5), minor_breaks = NULL)+
+  labs(x = expression(beta[0]), y = expression(beta[1]), parse = T)+
+  geom_line(size = 1, color = "red")+
+  geom_line(data = data.frame(  x = c(0,3, 3), y = c(0,0,4), name = c(1,2,3)  ), aes(x = x, y= y), color = "blue", size = 1)
+```
+
+
+\column{.35 \textwidth}
+
+- \color{red}{$\Vert \beta \Vert_2 = \sqrt{3^2 + 4^2} = 5$}
+
+\color{white}{thing}
+
+- \color{blue}{$\Vert \beta \Vert_1 = 3 + 4 = 7$}
+
+\columnsend
+
+
+## Geometric Perspective II
+
+- What does a circle of radius $r$ look like in the $\ell_2$ norm?
+
+\pause
+
+$$
+ \sqrt{ \beta_0^2 + \beta_1^2 }  =   \Vert \beta \Vert_2 \leq r
+$$
+
+```{r}
+circles <- data.frame(x0 = 0, y0 = 0, r = 2)
+t<-seq(from = 0, to = 8, by = 1)
+ggplot() + 
+  xlim(-3, 3)+ 
+  ylim(-3,3) +
+  coord_fixed()+
+  theme_bw()+
+  labs(x = expression(beta[0]), y = expression(beta[1]), parse = T)+
+  geom_circle(aes(x0 = x0, y0 = y0, r = r), data = circles, fill = "steelblue")+
+  geom_point( data = data.frame(x = c(0,1.41), y = c(0, 1.41)), aes(x = x, y=y))+
+  geom_line(data = data.frame(x = c(0,1.41), y = c(0, 1.41)), aes(x = x, y=y))+
+  annotate(geom = "text", y = 1, x = 0.45, label = "r = 2")
+```
+
+## Geometric Perspective II
+
+- What does a "circle" of radius $r$ look like in the $\ell_1$ norm?
+
+\pause
+
+$$
+|\beta_0| + |\beta_1|  =   \Vert \beta \Vert_1 \leq r
+$$
+
+```{r}
+d<-data.frame(x = c(2,0,-2, 0), y = c(0,2,0,-2))
+ggplot() + 
+  xlim(-3, 3)+ 
+  ylim(-3,3) +
+  coord_fixed()+
+  theme_bw()+
+  labs(x = expression(beta[0]), y = expression(beta[1]), parse = T)+
+  geom_polygon(d, mapping = aes(x = x, y = y), fill = "steelblue", color = "black" )+
+  geom_point( data = data.frame(x = c(0,1), y = c(0, 1)), aes(x = x, y=y))+
+  geom_line(data = data.frame(x = c(0,1,1), y = c(0, 0,1)), aes(x = x, y=y))+
+  annotate(geom = "text", y = .5, x = 0.45, label = "r = 2")
+```
+
+## LASSO
+
+In ridge regression, we seek parameters $\beta$ that minimize RSS plus the $\ell_2$ norm of $\beta$:
+$$
+\textrm{RSS} + \lambda \sum_{i =1}^p \beta_i^2 = \mathrm{RSS} + \lambda\Vert\beta\Vert_2
+$$
+
+\pause
+
+Alternatively, we could seek parameters $\beta$ that minimize RSS plus the $\ell_1$ norm of $\beta$:
+
+$$
+\textrm{RSS} + \lambda \sum_{i =1}^p |\beta_i| = \mathrm{RSS} + \lambda \Vert \beta \Vert_1
+$$
+
+This latter method is called the LASSO (least absolute shrinkage and selection operator)
+
+\pause
+
+- In addition to shrinking coefficients, it also happens to perform variable selection!
+
+## Alternative Formulations
+
+Instead of thinking of Ridge Regression and LASSO as minimizing the sum of RSS and the shrinkage penalty, we can think of them as solving a restricted optimization problem:
+
+\pause
+
+- For each $s \geq 0$, Ridge Regression seeks to minimize $\textrm{RSS}$ subject to $\Vert\beta\Vert_2 \leq s$
+
+- For each $s \geq 0$, LASSO seeks to minimize $\textrm{RSS}$ subject to $\Vert\beta\Vert_1 \leq s$
+
+\pause
+  
+The best subset algorithm also fits in this paradigm:
+
+- For each $s \geq 0$, best $s$-subset seeks to minimize $\textrm{RSS}$ subject to $\Vert\beta\Vert_0 \leq s$
+
+\pause
+
+
+Suppose $q$ is $0$, $1$, or $2$. For each $\lambda \geq 0$, there is exactly one $s \geq 0$ so that if $\beta$ minimizes
+$$
+\textrm{RSS} + \lambda \Vert \beta \Vert_q \qquad 
+$$
+
+then $\beta$ minimizes 
+$$
+\mathrm{RSS} \qquad \textrm{ subject to } \Vert \beta \Vert_q \leq s
+$$
+
+## Variable Selection with LASSO
+
+For LASSO, the solution to the optimization problem often lies on a vertex of the domain, which corresponds to a subspace where one or more parameters are $0$.
+
+```{r}
+x<-rep(seq(from = -3, to = 3,  length = 50), 50)
+y<-rep(seq(from = -3, to = 3,  length = 50), each = 50)
+
+dd<-data.frame(x,y) %>% mutate(z = 2*( (x-2)^2 - 1.25*(x-2)*(y-1.5) +(y-1.5)^2) )
+```
+
+
+\columnsbegin
+
+\column{0.5\textwidth}
+```{r out.width = "100%"}
+library(ggforce) 
+circles <- data.frame(
+  x0 = 0,
+  y0 = 0,
+  r = 1
+)
+
+t<-seq(from = 0, to = 8, by = 1)
+
+ggplot(  ) +xlim(-3, 3)+ ylim(-3,3) +coord_fixed()+theme_bw()+labs(x = "Beta_1", y = "Beta_2", title = "Ridge Regression")  +geom_contour(dd,mapping = aes(x = x, y = y, z = z), breaks = t, color = "grey")+ geom_circle(aes(x0 = x0, y0 = y0, r = r), data = circles, fill = "steelblue")+geom_point(aes(x = 2, y = 1.5))+annotate(geom="point", x = 2, y = 1.5, label = "Beta-hat")+annotate(geom="text", x = 2.1, y = 1.75, label = "Beta-hat")
+```
+
+\column{0.5\textwidth}
+
+```{r out.width = "100%"}
+
+d<-data.frame(x = c(1,0,-1, 0), y = c(0,1,0,-1))
+ggplot( ) +coord_fixed()+theme_bw()+xlim(-3, 3)+ ylim(-3,3) + labs(x = "Beta_1", y = "Beta_2", title = "LASSO")+geom_contour(dd,mapping = aes(x = x, y = y, z = z), breaks = t, color = "grey")  +geom_polygon(d, mapping = aes(x = x, y = y), fill = "steelblue", color = "black" )+annotate(geom="point", x = 2, y = 1.5, label = "Beta-hat")+annotate(geom="text", x = 2.1, y = 1.75, label = "Beta-hat")
+```
+
+
+
+\columnsend
+
+- Contours denote lines of constant RSS. 
+
+## Comparison of Penalized Regression Models
+
+- **Similarities**
+
+  - Can be implemented in R using `glmnet`. (Ridge regression uses `alpha = 0`, while LASSO uses `alpha = 1`)
+
+  \pause
+
+  - Can be fit in about the same amount of time as ordinary least squares
+
+  \pause
+
+  - Trade slightly increased bias for greatly reduced variance, compared to the full model. 
+
+\pause
+
+- **Differences**
+
+  - LASSO performs variable selection in addition to coefficient shrinkage
+
+  \pause
+
+  - In Ridge Regression, correlated predictors tend to have similar coefficients. The same is not true of LASSO.
+
+  \pause
+
+  - In general, LASSO tends to outperform Ridge Regression in cases where some of the coefficients are nearly or truly 0.
+
+  \pause
+
+  - Ridge Regression outperforms LASSO when all coefficients are significant (but variance is still a liability for MSE)
+  
+# LASSO in R
+
+## Solubility, once more
+
+The `solubility` data set from the `AppliedPredictiveModeling` package contains solubility and chemical structure for a sample of 1,267 different compounds.
+
+  - But suppose we only have a fraction of the data to work with...
+
+
+\small
+
+```{r echo = T}
+set.seed(1013)
+library(AppliedPredictiveModeling)
+data(solubility)
+solTest <- data.frame(solTestX, Solubility = solTestY) %>% sample_frac(.3)
+solTrain <- data.frame(solTrainX, Solubility =  solTrainY) %>% sample_frac(.3)
+solTest <- solTest %>% dplyr::select(!starts_with("FP"))
+solTrain <- solTrain %>%  dplyr::select(!starts_with("FP"))
+```
+
+## LASSO in R
+
+- We build LASSO models using identical code to Ridge Regression:
+
+\small
+
+\pause
+
+```{r echo = T}
+library(glmnet)
+grid = 10^(seq( -5, 5, length = 100))
+x<-model.matrix(Solubility ~., data = solTrain)[,-1]
+y<-solTrain$Solubility
+lasso_mod <- glmnet(x, y, alpha = 1, lambda = grid)
+```
+
+\pause
+
+\normalsize
+
+- But note what happens to coefficients:
+
+\footnotesize
+```{r echo = T}
+coef(lasso_mod)[1:5,c(1:3,98:100)]
+```
+
+
+## Coefficient Paths
+
+\small
+
+```{r echo = T}
+plot(lasso_mod, xvar = "lambda")
+```
+
+
+## Coefficient Paths
+
+\small
+
+```{r echo = T, fig.width = 9, fig.height = 5}
+library(broom)
+tidied <- tidy(lasso_mod) %>% filter(term != "(Intercept)")
+ggplot(tidied, aes(lambda, estimate, group = term, color = term)) +
+    geom_line() + scale_x_log10()+ theme_bw()+labs(title = "Coefficent estimates")
+```
+
+## Cross-Validation
+
+- To find the optimal penalty, we use `cv.glmnet`:
+
+\pause
+
+\footnotesize
+
+```{r}
+options(digits=3) 
+```
+
+
+```{r echo = T, eval = T, out.width = "60%", fig.height=3}
+set.seed(1010)
+my_cv<-cv.glmnet(x, y, alpha = 1, lambda = grid, nfolds = 10)
+
+best_L <- my_cv$lambda.min
+reg_L <- my_cv$lambda.1se
+
+data.frame(best_L, reg_L)
+```
+
+
+
+## Cross-validation plot
+
+\footnotesize
+
+```{r echo = T, out.width = "65%"}
+tidied <- tidy(my_cv)
+ggplot(tidied, aes(x = lambda, y = estimate))+geom_point( color = "red")+
+  scale_x_log10()+theme_bw()+labs(y = "MSE")+
+  geom_vline(xintercept = best_L, linetype = "dashed" )+
+  geom_vline(xintercept = reg_L, linetype = "dashed")
+```
+
+
+## Feature Selection
+
+- What features did the best $\lambda$ select?
+
+\pause
+
+\small
+
+```{r echo = T}
+s <- which(lasso_mod$lambda==best_L)
+s
+
+coef(lasso_mod)[,s]
+
+sum(coef(lasso_mod)[,s] !=0 )
+```
+
+
+## Overall Performance
+
+- Recall that `glmnet` already fits a model, so we just need to use `predict` to get predictions:
+
+\small
+
+```{r echo = T}
+x_tst <- model.matrix(Solubility ~., data = solTest)[,-1]
+lasso_preds <- predict(lasso_mod, s = best_L, newx = x_tst)
+mse <- mean( (solTest$Solubility - lasso_preds)^2)
+mse
+```
+\pause
+
+\normalsize
+
+- Let's compare performance for: the full model, ridge regression, LASSO with $\lambda =$ `r best_L`, and LASSO with $\lambda =$ `r reg_L`.
+
+\pause
+
+\footnotesize
+
+```{r echo = F}
+full_mod <- lm(Solubility ~ ., data = solTrain)
+ridge_mod <- glmnet(x, y, alpha = 0, lambda = grid)
+x_tst <- model.matrix(Solubility ~., data = solTest)[,-1]
+get_mse <- function(x){mean((solTest$Solubility-x)^2)}
+
+preds <- data.frame(
+  full = predict(full_mod, solTest),
+  rr_min = c(predict(ridge_mod, s = 0.0272, newx = x_tst)),
+  lasso_min = c(predict(lasso_mod, s = best_L, newx = x_tst)),
+  lasso_1se = c(predict(lasso_mod, s = reg_L, newx = x_tst))
+)
+preds %>% summarize(across(everything(),get_mse)) 
+```
+
+- **LASSO wins!**
