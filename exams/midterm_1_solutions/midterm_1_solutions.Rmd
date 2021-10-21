@@ -123,6 +123,34 @@ bv_trade <- data.frame(model = 1:6, train_mse, test_mse)
 bv_trade %>% pivot_longer(!model, values_to = "mse", names_to = "split") %>% ggplot(aes(x = model, y= mse, color = split), size = 1)+geom_line()+theme_bw()
 ```
 
+
+### Rubric
+
+#### Part a. 4 points
+
+- Define bias
+
+- Define variance
+
+- Indicate that both contribute to MSE
+
+- Describe inverse relationshop between two
+
+- Discuss why we care
+
+#### Part b. 6 points
+
+
+- Construct 6 models of varying complexity
+
+- Compute error on training data
+
+- Compute error on test data
+
+- Include graphics
+
+- Discuss why bias-variance tradeoff is evident
+
 *******************************************************
 
 ## Problem 2
