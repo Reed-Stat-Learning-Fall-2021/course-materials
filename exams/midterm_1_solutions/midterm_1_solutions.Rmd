@@ -126,7 +126,7 @@ bv_trade %>% pivot_longer(!model, values_to = "mse", names_to = "split") %>% ggp
 
 ### Rubric
 
-#### Part a. 4 points
+a. 4 points
 
 - Define bias
 
@@ -134,11 +134,11 @@ bv_trade %>% pivot_longer(!model, values_to = "mse", names_to = "split") %>% ggp
 
 - Indicate that both contribute to MSE
 
-- Describe inverse relationshop between two
+- Describe inverse relationship between two
 
 - Discuss why we care
 
-#### Part b. 6 points
+b. 6 points
 
 
 - Construct 6 models of varying complexity
@@ -230,7 +230,7 @@ summary(log_mod_p2)
 ```
 
 
-f. The diagnostic plots show that a linear model is significantly more appropriate for the log number of tranistors. There are a few points, however, that appear to have sizable influence.
+f. The diagnostic plots show that a linear model is significantly more appropriate for the log number of transistors. There are a few points, however, that appear to have sizable influence.
 
 ```{r}
 gglm(log_mod_p2)
@@ -244,6 +244,27 @@ confint(log_mod_p2)
 ```
 
 h. The confidence interval does contain the value 0.5, which is slope we would expect to see if Moore's Law were true.
+
+
+
+### Rubric
+
+a. 1 point
+
+b. 2 point
+
+c. 1 points
+
+d. 1 point
+
+e. 2 points
+
+f. 1 point
+
+g. 1 point
+
+h. 1 point
+
 
 
 ***********************************
