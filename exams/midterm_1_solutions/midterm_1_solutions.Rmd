@@ -386,6 +386,23 @@ mean(prob3_cv$rmse)
 g. The model diagnostics, F-statistic, adjusted R^2, and rmse all suggest that the model is relatively accurate in predicting the price of a bottle of wine. However, it is worth considering the relationship between price and quality. Without knowing about market efficiency, we do not have a good idea about whether price is a good indication of quality.
 
 
+### Rubric
+
+a. 1 point
+
+b. 2 point
+
+c. 1 points
+
+d. 2 point
+
+e. 1 points
+
+f. 2 point
+
+g. 1 point
+
+
 
 ***********************************
 
