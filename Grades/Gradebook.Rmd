@@ -1,0 +1,36 @@
+---
+title: "Gradebook"
+author: "Nate Wells"
+date: "10/24/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(readxl)
+```
+
+```{r}
+exams<-read_excel("Exam Grades.xlsx")[1:18,]
+slack<-read_excel("Slack Participation.xlsx")[1:18,]
+homework <- read_csv("Homework.csv")[1:18,]
+```
+
+```{r}
+gradebook <- inner_join(exams,slack, by = c("reed_id", "first_name", "last_name")) %>% inner_join(homework, by = c("reed_id", "first_name", "last_name")) %>% select(reed_id, first_name, last_name, Midterm_1_pct, Total, hw_pct)
+```
+
+```{r}
+gradebook <- gradebook %>% rowwise() %>% mutate(participation = min(Total, 11)/11)
+```
+
+```{r}
+weight_names <-c("homework", "midterm", "participation") 
+weights  <- c(.5, .4, .1)
+```
+
+```{r}
+gradebook <- gradebook %>% mutate(score = hw_pct*weights[1] + Midterm_1_pct*weights[2]+ participation*weights[3])
+```
+
