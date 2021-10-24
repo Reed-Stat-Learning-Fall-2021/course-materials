@@ -485,4 +485,26 @@ h. After measuring the weights and values of other predictors for 20 pumpkins at
 
 i. With only 20 observations, each model is very susceptible to differences between the training set and the population of pumpkins. We are almost certainly better off collecting data on different sets of 20 pumpkins, to effectively boost our sample size.
 
+
 ***********************************
+
+
+### Rubric
+
+a. 1 point
+
+b. 1 point
+
+c. 1 points
+
+d. 1 point
+
+e. 1 points
+
+f. 1 point
+
+g. 1.5 point
+
+h. 1.5 point
+
+i. 1 point
