@@ -35,12 +35,210 @@ library(ggforce)
 
 In today's class, we will...
 
+- Discuss further theory of logistic regression
  
-- Implement Logistic Regression in R
+- Implement logistic regression in R
 
 
-# Applications of Linear Regression
+# Logistic Regression Theory
 
+## Summary
+
+- In a classification problem, we are interested a categorical response variable $Y$.
+
+\pause
+
+- We might be interested in **predicting** the class for $Y$ based on observations, or we might be interested in **inferring** the relationships between $Y$ and predictors.
+
+\pause
+
+- Ideally, we would like to estimate the conditional probability of $Y$ given $X$
+$$
+P(Y = A_j| X)
+$$
+
+\pause
+
+- For binary response $Y$, we can use logistic regression, which assumes the log-odds of $Y=1$ is linear:
+$$
+\ln \frac{ P(Y = 1|X)}{1 - P(Y = 1|X)} = \beta_0 + \beta_1 X_1 + \dots + \beta_p X_p
+$$
+
+\pause
+
+- This implies the conditional probability is logistic:
+$$
+P(Y=1|X) = \frac{e^{\beta_0 + \beta_1 X_1 + \dots + \beta_p X_p}}{1 + e^{\beta_0 + \beta_1 X_1 + \dots + \beta_p X_p}}
+$$
+
+\pause
+
+- To classify, we assign a test observation the value $1$ if
+$$
+P(Y = 1|X) = \frac{e^{\beta_0 + \beta_1 X_1 + \dots + \beta_p X_p}}{1 + e^{\beta_0 + \beta_1 X_1 + \dots + \beta_p X_p}} \geq 0.5
+$$
+
+## Effect of Coefficients in Logistic Model
+
+- Consider a logistic regression model for a binary categorical variable $Y$ based on a single predictor $X$. \small
+$$
+\ln \frac{p(X)}{1 - p(X)} = \beta_0 + \beta_1 X \qquad p(X) = \frac{e^{\beta_0 + \beta_1 X}}{1 + e^{\beta_0 + \beta_1 X}}
+$$
+
+```{r}
+t <- seq(-10, 10, length = 100)
+logistic <- function(x,a,b){exp(a + b*x)/(1 + exp(a + b*x))}
+A<-logistic(t,0,1)
+B<-logistic(t,0,.5)
+C<-logistic(t,0,4)
+D<-logistic(t,0,-1)
+E<-logistic(t,0,-4)
+
+d <- data.frame(t, A, B, C,D,E) %>% pivot_longer(!t, names_to = "slope") %>% 
+  mutate(slope = case_when(
+    slope == "A" ~ "1",
+    slope == "B" ~ "0.5",
+    slope == "C" ~ "4",
+    slope == "D" ~ "-1",
+    slope == "E" ~ "-4",
+  )) %>% 
+  mutate(slope = fct_relevel(slope, "-4"))
+
+ggplot(d, aes(x =t, y = value, color = slope))+geom_line()+theme_bw()+labs(title = "Effect of Slope, with constant intercept of 0")
+```
+
+
+
+
+## Effect of Coefficients in Logistic Model
+
+- Consider a logistic regression model for a binary categorical variable $Y$ based on a single predictor $X$. \small
+$$
+\ln \frac{p(X)}{1 - p(X)} = \beta_0 + \beta_1 X \qquad p(X) = \frac{e^{\beta_0 + \beta_1 X}}{1 + e^{\beta_0 + \beta_1 X}}
+$$
+
+```{r}
+A<-logistic(t,0,1)
+B<-logistic(t,1, 1)
+C<-logistic(t,4,1)
+D<-logistic(t,-4,1)
+E<-logistic(t,-1,1)
+
+d <- data.frame(t, A, B, C,D,E) %>% pivot_longer(!t, names_to = "intercept") %>% 
+  mutate(intercept = case_when(
+    intercept == "A" ~ "0",
+    intercept == "B" ~ "1",
+    intercept == "C" ~ "4",
+    intercept == "D" ~ "-4",
+    intercept == "E" ~ "-1"
+  )) %>% 
+  mutate(intercept = fct_relevel(intercept, "-4"))
+
+ggplot(d, aes(x =t, y = value, color = intercept))+geom_line()+theme_bw()+labs(title = "Effect of Intercept, with constant slope of 1")
+```
+
+
+## Effect of Coefficients in Logistic Model
+
+- Consider a logistic regression model for a binary categorical variable $Y$ based on a single predictor $X$. \small
+$$
+\ln \frac{p(X)}{1 - p(X)} = \beta_0 + \beta_1 X \qquad p(X) = \frac{e^{\beta_0 + \beta_1 X}}{1 + e^{\beta_0 + \beta_1 X}}
+$$
+
+```{r}
+A<-logistic(t,0,-1)
+B<-logistic(t,1, -1)
+C<-logistic(t,4,-1)
+D<-logistic(t,-4,-1)
+E<-logistic(t,-1,-1)
+
+d <- data.frame(t, A, B, C,D,E) %>% pivot_longer(!t, names_to = "intercept") %>% 
+  mutate(intercept = case_when(
+    intercept == "A" ~ "0",
+    intercept == "B" ~ "1",
+    intercept == "C" ~ "4",
+    intercept == "D" ~ "-4",
+    intercept == "E" ~ "-1"
+  )) %>% 
+  mutate(intercept = fct_relevel(intercept, "-4"))
+
+ggplot(d, aes(x =t, y = value, color = intercept))+geom_line()+theme_bw()+labs(title = "Effect of Intercept, with constant slope of -1")
+```
+
+
+## Regression Coefficient Estimates
+
+- Assume that the log-odds of $Y = 1$ is indeed linear in $X_1, \dots , X_p$, so that
+$$
+\ln \frac{p(X)}{1 - p(X)} = \beta_0 + \beta_1 X_1 + \dots + \beta_p X_p
+$$
+
+  \pause
+  
+  - We need to estimate the parameters $\beta_0, \beta_1, \dots, \beta_p$ based on training data.
+
+\pause
+
+- We could use the Method of Least Squares, as we did with Linear Regression.
+
+  \pause
+  
+  - But there isn't a closed-from solution as in Linear Regression
+  
+  \pause
+  
+  - And in practice, residuals tend not to be approximately Normally distributed
+  
+\pause
+
+- Instead, we use the method of **Maximum Likelihood** (ML)
+
+## The Method of Maximum Likelihood
+
+- Under ML, we compare all possible models and select the one for which the observed data had highest probability of occurring 
+
+\pause
+
+- Suppose we have $k$ observations with $y = 1$ and $n-k$ with $y = 0$.
+
+  \pause
+  
+  - Assume we've relabeled indices so the first $k$ observations have $y = 1$
+
+  \pause
+  
+  \normalsize 
+
+  - As before, we assume \small
+$$
+p(X) = \frac{e^{\beta_0 + \beta_1 X_1 + \dots + \beta_p X_p}}{1 + e^{\beta_0 + \beta_1 X_1 + \dots + \beta_p X_p}}
+$$
+
+\pause
+
+- Then the probability of the observed data is \small
+$$
+\ell(\beta_0, \beta_1, \dots, \beta_p) = \prod_{i = 1}^k p(x_i) \prod_{j = k+1}^n (1 - p(x_{j}))
+$$
+
+  \pause
+  \normalsize
+  -  View $\ell$ as a function of parameters $\beta_0, \dots, \beta_p$ for **fixed** observations $x_1, \dots, x_n$.
+
+
+\pause
+  
+- The goal is to choose $\hat{\beta}_0, \hat \beta_1, \dots , \hat{\beta}_p$ so as to maximize $\ell$
+
+  \pause
+
+  - How? (Calculus or numeric methods, or R!)
+  
+ 
+
+
+
+# Logistic Regression Practice
 
 
 ## The Unsinkable Example
@@ -56,6 +254,14 @@ glimpse(Titanic)
 \normalsize
 
 - Goal: Determine relationship between survival, sex, and age.
+
+\pause
+
+- Is this primarily an inference or prediction task?
+
+  \pause
+
+  - Can it be neither?
 
 
 
@@ -86,15 +292,16 @@ Titanic1<-Titanic %>% drop_na(age)
 ## Children first?
 
 - Who survived the Titanic?
-\small
+\footnotesize
 
 ```{r echo =F}
-Titanic1 %>% ggplot( aes( x = age, y = survived))+ geom_jitter(height = .01, alpha = .25)+theme_bw()
+Titanic1 %>% ggplot( aes( x = age, y = survived))+ 
+  geom_jitter(height = .01, alpha = .25)+theme_bw()
 ```
 ## Women First?
 
 - Who survived the Titanic?
-\small
+\footnotesize
 
 ```{r echo =F}
 Titanic1 %>%  mutate(survived = as.factor(survived)) %>% 
@@ -103,81 +310,205 @@ Titanic1 %>%  mutate(survived = as.factor(survived)) %>%
 ```
 ## Women and Children First?
 
-\small
+\footnotesize
 
 ```{r echo =T}
-Titanic1 %>% ggplot( aes( x = age, y = survived, color = sex))+ geom_jitter(height = .01, alpha = .5)+theme_bw()
+Titanic1 %>% ggplot( aes( x = age, y = survived, color = sex))+ 
+  geom_jitter(height = .01, alpha = .5)+theme_bw()
 ```
-## Women and Children First?
 
-\small
-
-```{r echo =T}
-Titanic1 %>% ggplot( aes( x = age, y = survived, color = sex))+ geom_jitter(height = 0.03)
-```
 
 ## Logistic Model 1
 
  
 
-\small
+\footnotesize
 
-```{r echo =T}
+```{r echo =T, out.width = "60%"}
 Titanic1 %>% ggplot( aes( x = age, y = survived ))+ 
-  geom_jitter(height = 0.03) + 
+  geom_jitter(height = .01, alpha = .5)+theme_bw()+
   geom_smooth(method = "glm", method.args = list(family = "binomial"), se = F) 
 ```
 
-## Logistic Models 2 and 3
+$$
+p(X) = \frac{e^{0.117 - 0.01X}}{1 + e^{0.117 - 0.01X}}
+$$
+
+## VS Linear Model
 
  
 
-\small
+\footnotesize
+
+```{r echo =T, out.width = "60%"}
+Titanic1 %>% ggplot( aes( x = age, y = survived ))+ 
+  geom_jitter(height = .01, alpha = .5)+theme_bw()+
+  geom_smooth(method = "glm", method.args = list(family = "binomial"), se = F,size = 2,linetype = "dashed") +
+  geom_smooth(method = "lm", se = F, color  = "red")
+```
+
+$$
+p(X) = 0.528 - 0.003X
+$$
+
+
+
+## Logistic Model 2:
+
+ 
+
+\footnotesize
 
 ```{r echo =T}
+library(moderndive)
 Titanic1 %>% ggplot( aes( x = age, y = survived, color = sex ))+ 
-  geom_jitter(height = 0.03) + 
-  geom_smooth(method = "glm", method.args = list(family = "binomial"), se = F) 
+  geom_jitter(height = .01, alpha = .5)+theme_bw()+
+  geom_parallel_slopes(method = "glm", method.args = list(family = "binomial"), se = F)+
+  labs(title = "Logistic Regression, survival ~ age + sex")
+```
+
+## Logistic Model 3:
+
+ 
+
+\footnotesize
+
+```{r echo =T}
+library(moderndive)
+Titanic1 %>% ggplot( aes( x = age, y = survived, color = sex ))+ 
+  geom_jitter(height = .01, alpha = .5)+theme_bw()+
+  geom_smooth(method = "glm", method.args = list(family = "binomial"), se = F)+
+  labs(title = "Logistic Regression, survival ~ age*sex")
 ```
 
 ## R code for Logistic Models
 
-\small
+\columnsbegin
+\column{.5\textwidth}
+
+\tiny
 
 ```{r echo = T}
 simple_logreg <- glm(survived ~ age, data = Titanic1, family = "binomial")
-
-summary(simple_logreg)$coefficients
+summary(simple_logreg)
 ```
-\normalsize 
+
+\column{.45\textwidth}
+
+\small 
 
 \pause
 
-$\ln \frac{p(\textrm{Age})}{1 - p(\textrm{Age})} = 0.11 - 0.01  \cdot \textrm{Age}$
+- The logistic model is $$\ln \frac{p(\textrm{Age})}{1 - p(\textrm{Age})} = 0.11 - 0.01  \cdot \textrm{Age}$$
 
 \pause
 
-Since $e^{0.011} = 1.01106$, increasing age by 1 year decreases survival probability by $1.106\%$
+- Since $$e^{-0.011} = 0.989 = 1 - 0.011$$ increasing age by 1 year decreases survival probability by $1.1\%$ **of the current probability.**
+
+
+\columnsend
+
+
+## R code for Logistic Models
+
+\columnsbegin
+\column{.5\textwidth}
+
+\tiny
+
+```{r echo = T}
+simple_logreg <- glm(survived ~ age, data = Titanic1, family = "binomial")
+summary(simple_logreg)
+```
+
+\column{.45\textwidth}
+
+\small 
+
+- Where is RSE? $R^2$? $F$-stat?
+
+\pause
+
+- Logistic regression is from the family of *generalized linear models*
+
+  - GLiMs use *deviance* as metric of model fit.
+  
+  - Null deviance measures how well the null model (only intercept) predicts the data
+  
+  - Residual deviance measures how well the fitted model predicts the data
+  
+\pause
+
+- Fisher Scoring Iterations indicates the number of loops of numeric optimization algorithm
+
+\columnsend
+
 
 
 ## R code for Multiple Logistic Models
 
-\small
+- Suppose we fit a logistic model for `survived ~ age + sex`:
+
+\columnsbegin
+\column{.5\textwidth}
+
+\tiny
 
 ```{r echo = T}
 logreg <- glm(survived ~ age + sex, data = Titanic1, family = "binomial")
-
-summary(logreg)$coefficients
+summary(logreg) 
 ```
-\normalsize 
+
+\column{.45\textwidth}
+
+\small 
+
+\pause
+- What is the formula for the logistic model?
+ 
 
 \pause
 
-$\ln \frac{p(X)}{1 - p(X)} = 1.91 - 0.012 \cdot \textrm{Age} - 2.85 \cdot \textrm{Male}$
+- What is the survival probability for a male child of age $5$? A female child of age 5?
 
 \pause
 
-What is the survival probability for a male child of age $5$?
+- What effect does being male have on survival probability?
+
+\columnsend
+
+
+## R code for Multiple Logistic Models
+
+- Suppose we fit a logistic model for `survived ~ age * sex`:
+
+\columnsbegin
+\column{.5\textwidth}
+
+\tiny
+
+```{r echo = T}
+logreg2 <- glm(survived ~ age * sex, data = Titanic1, family = "binomial")
+summary(logreg2) 
+```
+
+\column{.45\textwidth}
+
+\small 
+
+\pause
+- What is the formula for the logistic model?
+
+\pause
+
+- What is the survival probability for a male child of age $5$? A female child of age 5?
+
+\pause
+
+- What effect does being male have on survival probability?
+
+\columnsend
+
 
 ## Classification using Logistic Regression
 
@@ -261,7 +592,7 @@ ifelse(predict(logreg, passengers, type = "response") >= .5, 1, 0)
 
 How well does our model do on training data?
 
-\small
+\footnotesize
 
 ```{r echo  = T}
 probs<-predict(logreg, Titanic1, type = "response")
@@ -280,7 +611,7 @@ $$
 $$
 \pause
 
-\small
+\footnotesize
 
 ```{r echo = T}
 n <- length(Titanic1$survived)
@@ -299,54 +630,4 @@ The `confusionMatrix` function in the `caret` package provides a confusion matri
 ```{r echo = T}
 library(caret)
 confusionMatrix(data =   factor(preds) , reference =  factor(Titanic1$survived)  )
-```
-
-## Sensitivity and Specificity
-
-**Sensitivity**: Rate of correct positive identification
-
-  - Type II Error rate: $1 - \textrm{Sensitivity}$
-
-**Specificity**: Rate of correct negative identification
-  
-  - Type I Error rate: $1- \textrm{Specificity}$
-
-\pause
-
-By changing our classification cutoff, we can increase sensitivity to the detriment of specificity (or vice versa)
-
-- But the tradeoff is non-linear
-
-  \pause
-  
-  - Increasing specificity by $.1$ may decrease sensitivity by $.15$ when specificity is $.8$
-  
-  - But the same increase in specificity may decrease sensitivity by $.25$ when specificity is $.9$.
-  
-\pause
-
-We measure the relative effect of sensitivity and specificity using an ROC curve
-
-## ROC Curves
-
-A Receiver Operating Characteristic (ROC) curve is a plot of sensitivity vs. type I error rate, based on classification probabilities.
-
-```{r}
-ggplot(data = data.frame(x = seq(0,1, by = .25), y = seq(0,1,by = .25))) +aes(x = x ,y = y) + theme_bw() + labs(title = "ROC", x = "Type I error", y = "Sensitivity")
-```
-
-
-\pause
-
-Poll: For a perfectly accurate model, what is the expected area under the ROC curve?
-
-## ROC Curves in R
-
-The `roc` function in the `pROC` package can create ROC curves.
-\small
-
-```{r echo = T}
-library(pROC)
-curve <- roc(response = Titanic1$survived, predictor = probs)
-plot(curve, legacy.axes=TRUE)
 ```
