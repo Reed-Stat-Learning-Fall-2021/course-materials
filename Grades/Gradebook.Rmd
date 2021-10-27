@@ -34,3 +34,4 @@ weights  <- c(.5, .4, .1)
 gradebook <- gradebook %>% mutate(score = hw_pct*weights[1] + Midterm_1_pct*weights[2]+ participation*weights[3])
 ```
 
+
