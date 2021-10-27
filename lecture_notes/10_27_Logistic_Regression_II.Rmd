@@ -1,7 +1,7 @@
 ---
 title: "Logistic Regression"
 author: "Nate Wells"
-date: "October 25th, 2021"
+date: "October 27th, 2021"
 institute: "Math 243: Stat Learning"
 fontsize: 9pt
 output: 
@@ -510,6 +510,8 @@ summary(logreg2)
 \columnsend
 
 
+# Classification
+
 ## Classification using Logistic Regression
 
 Develop a classification scheme based on the linear regression model.
@@ -559,10 +561,11 @@ passengers
 
 What are their survival log odds?
 
-\small
+\footnotesize
 
 ```{r echo = T, out.width = "100%"}
- predict(logreg, passengers) 
+odds<- predict(logreg2, passengers)
+odds
 ```
 \pause
 
@@ -570,10 +573,11 @@ What are their survival log odds?
 
 Survival probabilities?
 
-\small
+\footnotesize
 
 ```{r echo = T}
-predict(logreg, passengers, type = "response")
+probs <- predict(logreg2, passengers, type = "response")
+probs
 ```
 
 \normalsize
@@ -582,52 +586,76 @@ predict(logreg, passengers, type = "response")
 
 Classification?
 
-\small
+\footnotesize
 
 ```{r echo = T}
-ifelse(predict(logreg, passengers, type = "response") >= .5, 1, 0)
+ifelse(probs >= .5, 1, 0)
 ```
 
-## Confusion Tables
+## Confusion Matrix
 
-How well does our model do on training data?
+How well does our model do on training data? We'll use several functions from the `yardstick` package.
+
+\pause
+
+- First, we create data frame comparing observed and predicted classes:
 
 \footnotesize
 
+\pause
+
 ```{r echo  = T}
-probs<-predict(logreg, Titanic1, type = "response")
-preds<-ifelse(probs >=.5, 1, 0)
-conf_log <- table(preds, Titanic1$survived)
-conf_log
+probs<-predict(logreg2, Titanic1, type = "response")
+preds<-as.factor( ifelse(probs >=.5, 1, 0))
+obs <- as.factor(Titanic1$survived)
+results <- data.frame(obs, preds)
 ```
 
 \pause
 
 \normalsize
 
-Training Error rate:
-$$
-\textrm{Error rate} = \frac{1}{n} \sum_{i=1}^n I(y_i \neq \hat{y}_i)
-$$
-\pause
+- And then create a **confusion matrix** using `conf_mat` from `yardstick`
 
 \footnotesize
 
 ```{r echo = T}
-n <- length(Titanic1$survived)
-false_pos <- conf_log[1,2]
-false_neg <- conf_log[2,1]
-error <- 1/n *(false_pos + false_neg)
-error
+library(yardstick)
+conf_mat(results, truth  = obs, estimate = preds)
 ```
 
-## A better confusion matrix
 
-The `confusionMatrix` function in the `caret` package provides a confusion matrix along withe relevant statistics:
+## Error Measures
 
-\tiny
+
+- The overall error rate is the proportion of incorrect classifications:
+$$
+\textrm{error rate} = \frac{1}{n} \sum_{i=1}^n I(y_i \neq \hat{y}_i)
+$$
+\pause
+
+- In `yardstick`, the `accuracy` function returns the proportion of correct classifications:
+
+\footnotesize
 
 ```{r echo = T}
-library(caret)
-confusionMatrix(data =   factor(preds) , reference =  factor(Titanic1$survived)  )
+accuracy(results, truth = obs, estimate = preds)
 ```
+\normalsize
+
+- Accuracy is the sum of the diagonal elements in the confusion matrix divided by the total number of observations.
+
+
+\pause
+
+\normalsize
+
+- To obtain the error rate, we pull the accuracy estimate and subtract from 1:
+
+\footnotesize
+
+```{r echo = T}
+acc <- accuracy(results, truth = obs, estimate = preds) %>% pull(.estimate)
+1 - acc
+```
+
