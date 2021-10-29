@@ -1,0 +1,541 @@
+---
+title: "Logistic Regression"
+author: "Nate Wells"
+date: "October 29th, 2021"
+institute: "Math 243: Stat Learning"
+fontsize: 9pt
+output: 
+  beamer_presentation:
+    includes:
+      in_header: preamble.tex    
+graphics: yes    
+    
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = FALSE,
+	fig.align = "center",
+	message = FALSE,
+	cache = F,
+	fig.width = 6,
+	fig.height = 4,
+	warning = FALSE,
+	out.width = "70%"
+)
+library(tidyverse)
+library(knitr)
+library(ggthemes)
+library(ISLR)
+library(ggforce) 
+```
+
+## Outline
+
+In today's class, we will...
+ 
+- Implement logistic regression in R
+
+- Discuss measurements for assessing classification models
+ 
+# Logistic Regression Practice
+
+
+## The Unsinkable Example
+
+The `Titanic` data set contains information on passengers of the *Titanic*
+
+\tiny
+
+```{r}
+Titanic<-read_csv("data/titanic.csv")
+glimpse(Titanic)
+```
+\normalsize
+
+- Goal: Determine relationship between survival, sex, and age.
+
+\pause
+
+- Is this primarily an inference or prediction task?
+
+  \pause
+
+  - Can it be neither?
+
+
+
+## Data Analysis
+
+\tiny
+
+```{r echo = T}
+library(skimr)
+Titanic %>% select(age, sex, survived) %>% summary()
+Titanic %>% count(sex)
+Titanic %>% count(survived)
+```
+\normalsize
+
+- What are some concerns we may have about variables `sex`, `age` and `survival`?
+
+\pause
+
+\tiny
+
+```{r echo = T}
+library(tidyr)
+Titanic1<-Titanic %>% drop_na(age)
+```
+
+
+## Children first?
+
+- Who survived the Titanic?
+\footnotesize
+
+```{r echo =F}
+Titanic1 %>% ggplot( aes( x = age, y = survived))+ 
+  geom_jitter(height = .01, alpha = .25)+theme_bw()
+```
+## Women First?
+
+- Who survived the Titanic?
+\footnotesize
+
+```{r echo =F}
+Titanic1 %>%  mutate(survived = as.factor(survived)) %>% 
+  ggplot( aes( x = sex, fill = survived))+ 
+  geom_bar(position = "fill")+theme_bw()
+```
+## Women and Children First?
+
+\footnotesize
+
+```{r echo =T}
+Titanic1 %>% ggplot( aes( x = age, y = survived, color = sex))+ 
+  geom_jitter(height = .01, alpha = .5)+theme_bw()
+```
+
+
+## Logistic Model 1
+
+ 
+
+\footnotesize
+
+```{r echo =T, out.width = "60%"}
+Titanic1 %>% ggplot( aes( x = age, y = survived ))+ 
+  geom_jitter(height = .01, alpha = .5)+theme_bw()+
+  geom_smooth(method = "glm", method.args = list(family = "binomial"), se = F) 
+```
+
+$$
+p(X) = \frac{e^{0.117 - 0.01X}}{1 + e^{0.117 - 0.01X}}
+$$
+
+## VS Linear Model
+
+ 
+
+\footnotesize
+
+```{r echo =T, out.width = "60%"}
+Titanic1 %>% ggplot( aes( x = age, y = survived ))+ 
+  geom_jitter(height = .01, alpha = .5)+theme_bw()+
+  geom_smooth(method = "glm", method.args = list(family = "binomial"), se = F,size = 2,linetype = "dashed") +
+  geom_smooth(method = "lm", se = F, color  = "red")
+```
+
+$$
+p(X) = 0.528 - 0.003X
+$$
+
+
+
+## Logistic Model 2:
+
+ 
+
+\footnotesize
+
+```{r echo =T}
+library(moderndive)
+Titanic1 %>% ggplot( aes( x = age, y = survived, color = sex ))+ 
+  geom_jitter(height = .01, alpha = .5)+theme_bw()+
+  geom_parallel_slopes(method = "glm", method.args = list(family = "binomial"), se = F)+
+  labs(title = "Logistic Regression, survival ~ age + sex")
+```
+
+## Logistic Model 3:
+
+ 
+
+\footnotesize
+
+```{r echo =T}
+library(moderndive)
+Titanic1 %>% ggplot( aes( x = age, y = survived, color = sex ))+ 
+  geom_jitter(height = .01, alpha = .5)+theme_bw()+
+  geom_smooth(method = "glm", method.args = list(family = "binomial"), se = F)+
+  labs(title = "Logistic Regression, survival ~ age*sex")
+```
+
+## R code for Logistic Models
+
+\columnsbegin
+\column{.5\textwidth}
+
+\tiny
+
+```{r echo = T}
+simple_logreg <- glm(survived ~ age, data = Titanic1, family = "binomial")
+summary(simple_logreg)
+```
+
+\column{.45\textwidth}
+
+\small 
+
+\pause
+
+- The logistic model is $$\ln \frac{p(\textrm{Age})}{1 - p(\textrm{Age})} = 0.11 - 0.01  \cdot \textrm{Age}$$
+
+\pause
+
+- Since $$e^{-0.011} = 0.989 = 1 - 0.011$$ increasing age by 1 year decreases survival probability by $1.1\%$ **of the current probability.**
+
+
+\columnsend
+
+
+## R code for Logistic Models
+
+\columnsbegin
+\column{.5\textwidth}
+
+\tiny
+
+```{r echo = T}
+simple_logreg <- glm(survived ~ age, data = Titanic1, family = "binomial")
+summary(simple_logreg)
+```
+
+\column{.45\textwidth}
+
+\small 
+
+- Where is RSE? $R^2$? $F$-stat?
+
+\pause
+
+- Logistic regression is from the family of *generalized linear models*
+
+  - GLiMs use *deviance* as metric of model fit.
+  
+  - Null deviance measures how well the null model (only intercept) predicts the data
+  
+  - Residual deviance measures how well the fitted model predicts the data
+  
+\pause
+
+- Fisher Scoring Iterations indicates the number of loops of numeric optimization algorithm
+
+\columnsend
+
+
+
+## R code for Multiple Logistic Models
+
+- Suppose we fit a logistic model for `survived ~ age + sex`:
+
+\columnsbegin
+\column{.5\textwidth}
+
+\tiny
+
+```{r echo = T}
+logreg <- glm(survived ~ age + sex, data = Titanic1, family = "binomial")
+summary(logreg) 
+```
+
+\column{.45\textwidth}
+
+\small 
+
+\pause
+- What is the formula for the logistic model?
+ 
+
+\pause
+
+- What is the survival probability for a male child of age $5$? A female child of age 5?
+
+\pause
+
+- What effect does being male have on survival probability?
+
+\columnsend
+
+
+## R code for Multiple Logistic Models
+
+- Suppose we fit a logistic model for `survived ~ age * sex`:
+
+\columnsbegin
+\column{.5\textwidth}
+
+\tiny
+
+```{r echo = T}
+logreg2 <- glm(survived ~ age * sex, data = Titanic1, family = "binomial")
+summary(logreg2) 
+```
+
+\column{.45\textwidth}
+
+\small 
+
+\pause
+- What is the formula for the logistic model?
+
+\pause
+
+- What is the survival probability for a male child of age $5$? A female child of age 5?
+
+\pause
+
+- What effect does being male have on survival probability?
+
+\columnsend
+
+
+# Classification
+
+## Classification using Logistic Regression
+
+Develop a classification scheme based on the linear regression model.
+
+\pause
+
+$$
+\hat{Y} = \begin{cases} 1,& \textrm{ if } p(X) \geq 1 - p(X),\\ 0,& \textrm{ otherwise.}
+\end{cases}
+$$
+
+\pause
+
+$$
+\hat{Y} = \begin{cases} 1,& \textrm{ if odds } \geq 1,\\ 0,& \textrm{ if odds } < 1
+\end{cases}
+$$
+
+\pause
+
+
+$$
+\hat{Y} = \begin{cases} 1,& \textrm{ if log odds } \geq 0,\\ 0,& \textrm{ if log odds } < 0
+\end{cases}
+$$
+
+## Prediction and Classification in R
+
+Suppose we have $10$ hypothetical passengers with the following age/sex combinations:
+
+\small
+
+```{r }
+set.seed(1)
+passengers<- data.frame(age = seq(10, 46, length.out = 10), sex = sample(c("male", "female"), size = 10, replace = T))
+```
+
+ 
+
+```{r echo = T}
+passengers
+```
+
+## Prediction and Classification in R
+
+\normalsize
+
+What are their survival log odds?
+
+\footnotesize
+
+```{r echo = T, out.width = "100%"}
+odds<- predict(logreg2, passengers)
+odds
+```
+\pause
+
+\normalsize
+
+Survival probabilities?
+
+\footnotesize
+
+```{r echo = T}
+probs <- predict(logreg2, passengers, type = "response")
+probs
+```
+
+\normalsize
+
+\pause
+
+Classification?
+
+\footnotesize
+
+```{r echo = T}
+ifelse(probs >= .5, 1, 0)
+```
+
+## Confusion Matrix
+
+How well does our model do on training data? We'll use several functions from the `yardstick` package.
+
+\pause
+
+- First, we create data frame comparing observed and predicted classes:
+
+\footnotesize
+
+\pause
+
+```{r echo  = T}
+probs<-predict(logreg2, Titanic1, type = "response")
+preds<-as.factor( ifelse(probs >=.5, 1, 0))
+obs <- as.factor(Titanic1$survived)
+results <- data.frame(obs, preds, probs)
+```
+
+\pause
+
+\normalsize
+
+- And then create a **confusion matrix** using `conf_mat` from `yardstick`
+
+\footnotesize
+
+```{r echo = T}
+library(yardstick)
+conf_mat(results, truth  = obs, estimate = preds)
+```
+
+
+## Error Measures
+
+
+- The overall error rate is the proportion of incorrect classifications:
+$$
+\textrm{error rate} = \frac{1}{n} \sum_{i=1}^n I(y_i \neq \hat{y}_i)
+$$
+\pause
+
+- In `yardstick`, the `accuracy` function returns the proportion of correct classifications:
+
+\footnotesize
+
+```{r echo = T}
+accuracy(results, truth = obs, estimate = preds)
+```
+\normalsize
+
+- Accuracy is the sum of the diagonal elements in the confusion matrix divided by the total number of observations.
+
+
+\pause
+
+\normalsize
+
+- To obtain the error rate, we pull the accuracy estimate and subtract from 1:
+
+\footnotesize
+
+```{r echo = T}
+acc <- accuracy(results, truth = obs, estimate = preds) %>% pull(.estimate)
+1 - acc
+```
+
+## Sensitivity and Specificity
+
+**Sensitivity**: Rate of correct positive identification (i.e. proportion of true positives correctly estimated)
+
+  - Type II Error rate: $1 - \textrm{Sensitivity}$
+
+**Specificity**: Rate of correct negative identification (i.e. proportion of true negatives correctly estimated)
+  - Type I Error rate: $1- \textrm{Specificity}$
+
+\pause
+
+- By changing our classification cutoff, we can increase sensitivity to the detriment of specificity (or vice versa)
+
+- But the tradeoff is non-linear
+  
+  - Increasing specificity by $.1$ may decrease sensitivity by $.15$ when specificity is $.8$
+  
+  - But the same increase in specificity may decrease sensitivity by $.25$ when specificity is $.9$.
+  
+\pause
+
+- When might we want high specificity? High sensitivity?
+
+\pause
+
+- What are the ramifications of changing the classification cutoff vis-a-vis the Bayes' Classifier?
+
+## ROC Curves
+
+A Receiver Operating Characteristic (ROC) curve is a plot of sensitivity vs. type I error rate, based on classification probabilities.
+
+```{r  out.width= "50%"}
+ggplot(data = data.frame(x = seq(0,1, by = .25), y = seq(0,1,by = .25))) +aes(x = x ,y = y) + theme_bw() + labs(title = "ROC", x = "1 - specificity", y = "Sensitivity")
+```
+
+
+\pause
+
+- What does the ROC curve look like for a perfectly accurate model?
+
+\pause
+
+- Consider an (uninformed) model that guesses $1$ with probability $p$, regardless of predictors. What point on the ROC plot represents this model?
+
+## ROC Curves in R
+
+The `roc_curve` function in the `yardstick` package can create ROC curves.
+\small
+
+```{r echo=T, out.width= "50%"}
+r <- roc_curve(data = results, truth = obs, probs, event_level = "second")
+autoplot(r)
+```
+
+\small
+
+- And we can compute the area under the curve using `roc_auc()`
+
+```{r echo = T}
+roc_auc(data = results, truth = obs, probs, event_level = "second")
+```
+
+## ROC Curves in R
+
+What threshold corresponds to the "kink" in the ROC curve?
+
+\small
+
+```{r echo = T}
+r <- r %>% mutate(distance = sqrt(  
+  (1-specificity)^2 + (1-sensitivity)^2))
+```
+
+\pause
+
+```{r echo = T}
+r %>% arrange(distance) %>% head()
+```
+
