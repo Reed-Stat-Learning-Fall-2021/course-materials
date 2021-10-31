@@ -1,0 +1,340 @@
+---
+title: "KNN in R"
+author: "Nate Wells"
+date: "November 1st, 2021"
+institute: "Math 243: Stat Learning"
+fontsize: 9pt
+output: 
+  beamer_presentation:
+    includes:
+      in_header: preamble.tex    
+graphics: yes    
+    
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = FALSE,
+	fig.align = "center",
+	message = FALSE,
+	cache = F,
+	fig.width = 6,
+	fig.height = 4,
+	warning = FALSE,
+	out.width = "70%"
+)
+library(tidyverse)
+library(knitr)
+library(ggthemes)
+library(ISLR)
+library(ggforce) 
+```
+
+## Outline
+
+In today's class, we will...
+ 
+- Implement KNN in R
+
+- Compare KNN and Logistic Regression
+ 
+# KNN in R
+
+
+## The Unsinkable Example
+
+The `Titanic` data set contains information on passengers of the *Titanic*
+
+\pause
+
+- Goal: Build a model with high predictive accuracy using several predictors
+
+\footnotesize
+
+```{r echo = T}
+
+Titanic<-read_csv("data/titanic.csv") %>% 
+  select(survived, age, pclass, embarked, sex) %>%
+  drop_na() %>% mutate(survived = as.factor(survived))
+
+Titanic %>% count()
+
+library(rsample)
+set.seed(111)
+Titanic_split <- initial_split(Titanic, prop = .8, stata = survived)
+Titanic_train <- training(Titanic_split)
+Titanic_test <- testing(Titanic_split)
+```
+
+
+
+
+
+## Data Analysis
+
+\tiny
+
+```{r echo = F, fig.height = 5, out.width = "75%", cache = T}
+library(GGally)
+ggpairs(Titanic_train, aes(color = survived), lower = list( discrete =  wrap("colbar", size = 1), combo = "facetdensity"   ))+theme_bw()+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 6))+
+  theme(axis.text.y = element_text(hjust = 1, size = 6))
+```
+
+## Data Analysis
+
+- What trends do you notice among variables?
+
+\vspace{5 in}
+
+## KNN
+
+- Recall: The KNN model estimates the conditional probability $P(Y = 1 \, | \, X)$ as
+\small
+$$
+P(Y = 1 \, | \, X = x_0 ) \approx \frac{1}{K} \sum_{i \in N_0} I(y_i = 1)
+$$
+\pause
+\vspace{-1em}
+\normalsize
+
+- In R, we have two options for KNN: 
+
+  - Use `knn` from `class` (textbook's choice)
+
+  - Use the `kknn` function in the `kknn` package (preferable)
+
+\pause
+
+- Both `kknn` and `knn` fit a model **and** makes predictions all in one command.
+  
+  \pause
+  
+  - Compare to`lm` and `glm`, which first fit a model and then make predictions using `predict`
+
+\pause
+  
+- The `knn` function requires a model matrix (use `model.matrix`); while `kknn` instead uses a formula (`y ~.`)
+
+\pause
+
+- KNN works best if predictors are standardized first (why?)
+  
+  - `knn` requires us to standardize using `scale`
+  
+  - `kknn` standardizes for us
+  
+\pause
+
+- `kknn` allows us to (optionally) weight observations **by** distance
+
+## KNN in R
+
+- Using `kknn` with $k = 5$
+
+\footnotesize
+
+```{r echo = T}
+library(kknn)
+Titanic_fit5 <- kknn(survived ~., train = Titanic_train, test = Titanic_test,
+                     k = 5, kernel = "rectangular")
+```
+
+\normalsize
+
+  - Setting `kernel = "rectangular"` corresponds to classic KNN
+  
+\pause
+
+- The output of `kknn` is a list with components:
+
+  - `fitted.values`, a vector of predicted classes
+  
+  - `prob`, a matrix of predicted class probabilities
+  
+  - `CL`, a matrix of classes of the $k$ nearest neighbors
+  
+  - `D`, a matrix of distances of the $k$ nearest neighbors 
+  
+\pause
+
+\footnotesize
+
+\columnsbegin
+
+\column{.45 \textwidth}
+```{r echo = T}
+Titanic_fit5$fitted.values %>% head()
+```
+\column{.45\textwidth}
+```{r echo = T}
+Titanic_fit5$prob %>% head()
+```
+\columnsend
+
+## Model Performance
+
+- Create dataframe of results:
+\footnotesize
+
+```{r echo = T}
+titanic_results_knn <- data.frame(obs = Titanic_test$survived,
+                                  preds = Titanic_fit5$fitted.values,
+                                  probs = Titanic_fit5$prob[,2])
+```
+
+\pause
+\normalsize
+
+- Metrics via `yardstick` package
+
+\footnotesize
+
+```{r echo = T}
+library(yardstick)
+conf_mat(titanic_results_knn, truth = obs, estimate = preds)
+```
+```{r echo=T}
+accuracy(titanic_results_knn, truth = obs, estimate = preds)
+```
+
+## ROC Curve
+
+\footnotesize
+```{r echo = T}
+roc_curve(titanic_results_knn, truth = obs, estimate = probs,  event_level = "second") %>% 
+  autoplot()
+```
+
+- Why is ROC plot so linear?
+
+## Tuning KNN parameters
+
+- How would our classifier behave for different values of $k$?
+
+\pause
+
+- To find out, we use the `train.kknn` function, which performs LOOCV 
+
+  - k-fold CV is not recommended for KNN, due to computation time concerns
+
+\pause
+
+\footnotesize
+```{r echo = T}
+titanic_tune <- train.kknn(survived ~., data = Titanic_train, 
+                           kmax = 40, kernel = "rectangular")
+```
+
+\pause
+\small
+
+- Instead of `kmax`, can supply a vector of k values with `ks=`
+
+- `train.kknn` creates a list with several components:
+
+  - `MISCLASS`, a vector of misclassifation error for each k
+  
+  - `fitted.values`, a list of vectors of predictions for all k
+  
+  - `best.parameters`, the best parameter value for k
+  
+\pause
+\footnotesize
+\columnsbegin
+
+\column{.45 \textwidth}
+
+```{r echo = T}
+titanic_tune$best.parameters
+```
+\column{.45 \textwidth}
+
+```{r echo = T}
+titanic_tune$MISCLASS %>% head()
+```
+
+\columnsend
+
+## Bias-Variance Trade-off
+
+\footnotesize
+```{r echo = T}
+as.data.frame(titanic_tune$MISCLASS) %>% 
+  rownames_to_column(var = "k") %>% 
+  mutate(error = rectangular, k = as.numeric(k)) %>% 
+ggplot(aes(x = k, y = error))+geom_point()+geom_smooth(se = F)+theme_bw()
+```
+
+## Performance on Test Set
+
+- Let's predict with $k = 1,3,5,8,25$. 
+
+  - First, we create a data frame with `obs`, `preds`, and `probs` for all models.
+
+\pause
+\footnotesize
+
+```{r echo = T}
+titanic_results<- data.frame()
+for (k in c(1,3,5,8,25)){
+  Titanic_fit <- kknn(survived ~., train = Titanic_train, test = Titanic_test,
+                     k = k, kernel = "rectangular")
+  titanic_results<-rbind(titanic_results,
+        data.frame(model = rep(k, times = length(Titanic_test$survived)), 
+                   obs = Titanic_test$survived,
+                   preds = Titanic_fit$fitted.values,
+                   probs = Titanic_fit$prob[,2]))
+}
+```
+
+\pause
+
+```{r echo = T}
+titanic_results %>% group_by(model) %>% accuracy(truth = obs, estimate = preds)
+```
+
+## Comparison with Logistic Regression
+
+\footnotesize
+
+```{r echo = T}
+Titanic_lr <- glm(survived ~., data = Titanic_train, family = "binomial")
+
+lr_probs <- predict(Titanic_lr, Titanic_test, type = "response")
+lr_preds <- ifelse(lr_probs>=.5, "1", "0")
+
+titanic_results<- rbind(titanic_results,
+        data.frame(model = rep("logistic regression", times = length(Titanic_test$survived)), 
+                   obs = Titanic_test$survived,
+                   preds = lr_preds,
+                   probs = lr_probs))
+```
+
+\pause
+
+```{r echo = T}
+titanic_results %>% group_by(model) %>% accuracy(truth = obs, estimate = preds) %>% arrange(desc(.estimate))
+```
+
+## ROC Curves
+
+\footnotesize
+
+ 
+
+```{r echo = T, out.width = "70%"}
+titanic_results %>% group_by(model) %>% 
+  roc_curve(obs, probs,event_level = "second") %>% 
+  autoplot()
+```
+## ROC Curves
+
+\footnotesize
+
+```{r echo = T}
+titanic_results %>% group_by(model) %>% 
+  roc_auc(obs, probs, event_level = "second") %>% arrange(desc(.estimate))
+```
+
