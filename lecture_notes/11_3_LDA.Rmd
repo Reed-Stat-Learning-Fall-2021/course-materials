@@ -1,0 +1,446 @@
+---
+title: "Linear Discriminant Analysis"
+author: "Nate Wells"
+date: "November 3rd, 2021"
+institute: "Math 243: Stat Learning"
+fontsize: 9pt
+output: 
+  beamer_presentation:
+    includes:
+      in_header: preamble.tex    
+graphics: yes    
+    
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = FALSE,
+	fig.align = "center",
+	message = FALSE,
+	cache = F,
+	fig.width = 6,
+	fig.height = 4,
+	warning = FALSE,
+	out.width = "70%"
+)
+library(tidyverse)
+library(knitr)
+library(ggthemes)
+library(ISLR)
+library(ggforce) 
+```
+
+## Outline
+
+In today's class, we will...
+
+- Discuss LDA theory and motivation
+
+- Build an LDA classifier by hand
+
+ 
+
+
+# LDA
+
+## Logistic Regression, KNN, and Bayes' Classifier
+
+Recall that for a binary classification problem, the average test error rate is minimized using the Bayes' classifier:
+
+$$
+f(x_0) = \mathrm{argmax}_j P(Y = j \, | \, X = x_0) \quad j \in \{0,1\}
+$$
+
+\pause
+
+Both KNN and Logistic regression attempt to estimate the conditional probability $p(X) = P(Y= 1\, | \, X)$:
+
+\pause
+
+- Logistic regression:
+  $$
+  p(X) =    \frac{e^{\beta_0 + \beta_1 X_1 + \dots + \beta_p X_p }}{1 + e^{\beta_0 + \beta_1 X_1 + \dots + \beta_p X_p }}
+  $$
+  
+\pause
+
+- KNN:
+  $$
+  p(X)  = \frac{1}{K} \sum_{i \in N_0} I(y_i = 1)
+  $$
+  
+## The Law of Total Probability 
+
+Suppose $A_1, A_2, \dots, A_k$ are a list of events that are:
+
+- *mutually exclusive*: $P(A_i \textrm{ and } A_j) = 0$
+
+- *exhaustive*: $P(A_1)+ P(A_2) \dots + P(A_k) = 1$
+
+  - Example: Flip two coins, and let $A_1 = \textrm{both flips are different}$, $A_2 = \textrm{both flips are heads}$, $A_3 = \textrm{both flips are tails}$.
+  
+Then for any other event $B$,
+$$
+P(B) = P(B|A_1)P(A_1) + P(B|A_2)P(A_2)+ \dots + P(B|A_k)P(A_k)
+$$
+\pause
+
+### Example
+
+Consider two boxes of marbles, the first containing $60\%$ blue and $40\%$ red, and the second containing $10\%$ blue and $90\%$ red. Suppose we draw a marble from the first box with $20\%$ probability and from the second box with $80\%$ probability. 
+
+- What is the probability we draw a blue marble?
+
+
+## Bayes' Rule
+
+For any events $A$ and $B$, 
+$$
+P(A | B ) = \frac{P(B|A)P(A)}{P(B)}
+$$
+\pause
+
+- $P(A)$ is called the *prior probability* of $A$ and represents our initial beliefs about the event $A$.
+
+- Suppose $B$ is an event that we observe occurring. 
+
+- $P(A|B)$ is called the *posterior probability* of $A$ and represents our updated beliefs about the event $A$ in light of the event $B$.
+
+\pause
+
+### Example
+
+Suppose a test for a certain disease has specificity $.9$ and sensitivity $.8$, and that the disease has prior prevalence of $0.01$. Find the posterior probability that an individual who tests positive for the disease actually has the disease.
+ 
+
+## The Bayesian Flip
+
+For classification problems, we want to know $P(Y = A_j \, |\, X = x_0)$.
+
+\pause
+
+- Using Bayes' Rule:
+\begin{align*}
+P(Y = A_j \, |\, X = x_0) =& \frac{P(X = x_0 \, | \, Y = A_j) P(Y = A_j) }{P(X = X_0) } \\ =& \frac{P(X = x_0 \, | \, Y = A_j) P(Y = A_j) }{\sum_i P(X = X_0 | Y = A_i) P(Y = A_i) }
+\end{align*}
+
+\pause
+
+- We estimate the conditional probability of the response using...
+
+  - The conditional distribution $P(X = x_0 \, | \, Y = A_j)$ of each predictor **given the response**
+  
+  - The prior distribution $\pi_i = P(Y = A_i)$ of the response
+
+\pause
+
+- In practice, we don't have access to the conditional distributions of the predictors, so need to estimate them based on data.
+
+## LDA
+
+- Suppose we have just one predictor $X$ and a multi-level categorical response $Y$.
+
+\pause
+
+- What is the most "natural" assumption for the conditional distribution of $X$, given $Y = A_j$? 
+
+\pause
+
+- If $X$ is normal with mean $\mu_j$ and variance $\sigma_j^2$, its density is
+
+$$
+P(X =x \, | \, Y  = A_j ) = f_j(x) = \frac{1}{\sqrt{ 2 \pi \sigma_j^2 }}e^{-(x-\mu_j)^2/2 \sigma_j^2}
+$$
+
+\pause
+
+- Moreover, if we assume all conditional distributions have the **same** variance $\sigma_j^2 = \sigma^2$, we can simplify our model.
+
+##  Likelihood Ratio
+
+- To determine to which class an observation belongs, based on the conditional distribution of predictors, we consider the likelihood ratio (LR):
+$$
+\textrm{LR} = \frac{P(Y=A_j | X= x_0)}{P(Y= A_k|X = x_0)}
+$$
+\pause
+
+- If $\textrm{LLR}\geq 1$, we should predict $A_j$ over $A_k$. Otherwise, predict $A_k$ over $A_j$.
+
+\pause
+
+- And using Bayes' Rule:
+
+
+\begin{align*}
+\frac{P(Y = A_j \, | \, X = x_0)}{P(Y = A_k \, | \, X = x_0)} =& \frac{P(X = x_0 \, | \, Y = A_j )P(Y = A_j ) / P(X = x_0 )}{P(X = x_0 \, | \, Y = A_k )P(Y = A_k ) / P(X = x_0 )} \\
+= & \frac{P(X = x_0 \, | \, Y = A_j )P(Y = A_j )}{P(X = x_0 \, | \, Y = A_k )P(Y = A_k ) } \\
+=& \frac{e^{-(x_0-\mu_j)^2/2 \sigma^2} \pi_j }{e^{-(x_0-\mu_k)^2/2 \sigma^2} \pi_k}
+\end{align*}
+
+## The Log-liklihood Ratio
+
+The log-liklihood ratio is obtained by taking natural log of the liklihood ratio:
+
+\begin{align*}
+\ln \textrm{LR} =&   \ln \frac{P(Y = A_j \, | \, X = x_0)}{P(Y = A_k \, | \, X = x_0)} \\ =& \ln \frac{e^{-(x_0-\mu_j)^2/2 \sigma^2} \pi_j }{e^{-(x_0-\mu_k)^2/2 \sigma^2} \pi_k}\\  =& (x_0-\mu_k)^2/2 \sigma^2  - (x_0-\mu_j)^2/2 \sigma^2  + \ln \pi_j - \ln \pi_k
+\end{align*}
+
+\pause
+
+- The decision boundary between $A_j$ and $A_k$ is the point $c$ where $\ln \textrm{LR} = 0$, or
+$$
+(c-\mu_k)^2/2 \sigma^2  + \ln \pi_j =  (c-\mu_j)^2/2 \sigma^2  + \ln \pi_k
+$$
+\pause
+
+- Solving for $c$ gives
+$$
+c = \frac{\mu_1 + \mu_2}{2} +  \frac{\sigma^2(\ln \pi_k - \ln \pi_j)}{\mu_j - \mu_k}
+$$
+
+## Binary Classfication with Uniform Prior
+
+Suppose $Y$ is binary, and that each of $X|Y=0$ and $X|Y=1$ are Normal with common variance $\sigma$ and means $\mu_0$ and $\mu_1$. Moreover, assume a uniform prior $\pi_0 = \pi_1 = \frac{1}{2}$
+
+\pause
+
+Solve for $c$ in 
+$$
+(c-\mu_k)^2/2 \sigma^2  + \ln \pi_j =  (c-\mu_j)^2/2 \sigma^2  + \ln \pi_k
+$$
+
+\vspace{10 em}
+
+\pause
+
+
+We get $c = \frac{\mu_1 + \mu_2}{2}$
+
+## Plots
+
+Suppose $X|Y = 0 \sim N(0,1)$ and $X |Y = 1 \sim N(4,1)$
+```{r}
+x<-seq(from = -3, to = 7, by = .1)
+f1<-dnorm(x,0,1)
+f2<-dnorm(x,4,1)
+d<-data.frame(x,f1,f2)
+
+ggplot(d) + geom_line(aes(x = x, y = f1), color = "salmon")+geom_line(aes(x = x, y = f2), color = "darkturquoise") +theme_bw()+scale_x_continuous(breaks = c(-2, 0, 2, 4, 6)) +annotate(geom ="text", x = -2, y = .25, label = "X|Y = 0")+annotate(geom ="text", x = 6, y = .25, label = "X|Y = 1") + annotate(geom = "point", x = 2, y = 0, color = "purple") + geom_vline(xintercept = 2, color = "purple", linetype = "dashed")+labs(y = "density")
+```
+
+## What is LDA?
+
+If we **knew** the conditional distribution of the predictors, we could easily create decision boundaries.
+
+\pause
+
+- But we only have data, so we need to estimate those distributions.
+
+\pause
+
+- A normal distribution requires only 2 parameters: $\mu$ and $\sigma$. 
+
+  \pause
+
+  - We need one estimate of $\mu$ for each level of $Y$.
+  
+  - Since we assumed each conditional distribution had the same variance, we need only 1 estimate for $\sigma$
+
+\pause
+
+- LDA is an algorithm for obtaining these estimates and then classifying based on log-likelihood ratio.
+
+\pause
+
+- Our estimates for $\mu_j$ and $\sigma^2$ are:
+$$
+\hat{\mu}_j = \frac{1}{n_j}\sum_{i:y_i = A_j}x_i \qquad \hat{\sigma}^2 = \frac{1}{n-\ell}\sum_{j=1}^\ell \sum_{i:y_i = A_j}(x_i - \hat{\mu_j})^2
+$$
+
+ 
+
+## The Discriminant
+
+Rather than comparing log likelihoods, we could instead look at the log conditional probability for each level. This function $\delta_j(x)$ is called the *discriminant* for level $j$:
+
+\pause
+
+$$
+\delta_j(x) =  x \cdot \frac{\mu_{j}}{\sigma^2 } - \frac{\mu_j^2}{2\sigma^2} + \ln \pi_j
+$$
+
+\pause
+
+- The discriminant is obtained by taking log-probabilities and discarding terms in the sum that don't depend on $j$.
+
+\pause
+
+
+- We can then assign an observation $x_0$ to the class whose discriminant is largest at $x = x_0$.
+
+\pause
+
+- Why is LDA called **Linear** Discriminant Analysis?
+
+  \pause
+
+  - Because the discriminant function is linear in $x$.
+  
+  \pause
+  
+  - Using this classification algorithm will result in  linear decision boundaries.
+  
+
+
+# Handmade LDA model
+ 
+
+## LDA
+
+Suppose $Y$ is a categorical variable with $\ell$ levels, and for each level $A_j$, that $$X|Y =A_j \sim N(\mu_j , \sigma).$$
+
+\pause
+
+The discriminant function
+$$
+\delta_j(x) = x \cdot \frac{\mu_{j}}{\sigma^2 } - \frac{\mu_j^2}{2\sigma^2} + \ln \pi_j
+$$
+
+can be used to classify an observation by choosing the level $A_j$ whose discriminant is largest at $x$.
+
+\pause
+
+We estimate the values of $\mu_j$ and $\sigma$ from the sample data:
+
+$$\hat{\mu}_j = \frac{1}{n_j}\sum_{i:y_i = A_k}x_i$$
+
+\pause 
+
+
+$$\hat{\sigma}^2 = \frac{1}{n-\ell}\sum_{j=1}^\ell \sum_{i:y_i = A_k}(x_i - \hat{\mu_j})^2$$
+  
+## Simulated Data
+
+Suppose $X  | Y = 0  \sim N(1,1)$ and $X  | Y = 1  \sim N(3,1)$, and that $\pi_0 = .75$ and $\pi_1 = .25$.
+
+```{r}
+set.seed(212)
+n<-100
+
+Y<-rep(c("0","1"), c(3*n/4, n/4))
+X<-c(rnorm(3*n/4, 1, 1), rnorm(n/4, 3, 1) )
+
+d<-data.frame(X,Y)
+```
+
+```{r out.width = "70%", cache=F}
+mu0<-d %>% filter(Y == 0) %>% summarise(mu = mean(X) ) %>% pull()
+mu1<-d %>% filter(Y == 1) %>% summarise(mu = mean(X) ) %>% pull()
+ssx <- d %>% group_by(Y) %>% summarize(ssx = var(X) * (n() - 1), n()) %>% pull(2,)
+sigma2 <- sum(ssx)/(n - 2)
+density0 <- function(x){dnorm(x, mean = mu0, sd = sqrt(sigma2))}
+density1 <- function(x){dnorm(x, mean = mu1, sd = sqrt(sigma2))}
+pi0 <- sum(d$Y =="0")/n
+pi1 <- sum(d$Y =="1")/n
+
+d %>% mutate(y = 0) %>% 
+ggplot(aes(x = X, color = Y) )+geom_jitter(aes(x= X, color = Y,y = y), alpha = .55, size = 2, height = .01)+geom_function(fun = density0, color = "salmon")+geom_function(fun = density1)+theme_bw()+labs(y = "density")
+```
+\pause
+
+- What feature of the graph shows that $\pi_0 = .75$ and $\pi_1 = .25$?
+
+
+## Find Estimates
+ 
+
+Estimates for $\mu_j$ and $\pi_j$
+
+\small
+```{r echo = T}
+d %>% group_by(Y) %>% summarize(pi = n()/n, mu = mean(X))
+```
+
+\pause
+
+\normalsize
+
+Estimate for $\sigma^2$.
+
+\small
+
+```{r echo = T}
+d %>% group_by(Y) %>% summarize(ssx = var(X) * (n() - 1)) %>%
+  summarize(sigma_sq = sum(ssx)/(n-2))
+```
+
+## The discriminant function
+
+Solve for intersection of discriminant functions: $\delta_0 (c) = \delta_1(c)$ when
+
+\pause
+
+$$
+c = \frac{\mu_0 + \mu_1}{2} + \frac{ \sigma^2 (\ln \pi_0 - \ln \pi_1) }{ \mu_1 - \mu_0}
+$$
+
+
+\pause
+\small
+```{r echo = T}
+c<- (mu0 + mu1)/2 + (sigma2*log(pi0) - log(pi1))/(mu1-mu0)
+c
+```
+\pause
+
+\normalsize
+
+Write a function to create discriminant functions:
+\small
+```{r echo = T}
+discriminant <- function(x, pi, mu, sigma2) {
+  x * (mu/sigma2) - (mu^2)/(2 * sigma2) + log(pi)
+}
+```
+
+\normalsize
+\pause
+
+Evaluate discriminant function on data for each class:
+
+\small
+```{r echo=T}
+d0 <- discriminant(d$X, pi0, mu0, sigma2)
+d1 <- discriminant(d$X, pi1, mu1, sigma2)
+```
+
+
+
+
+
+
+## Plots
+
+```{r warning = F, fig.height = 2.25}
+
+discriminant_data <- data.frame(d, d0,d1, y = 0)
+
+ggplot(discriminant_data) + 
+  geom_jitter(aes(x = X, y = 0, color = Y), height = .15,alpha = .55, size = 2)+
+  geom_line(aes(x = X, y = d0), color = "salmon", size = 1)+
+  geom_line(aes(x = X, y = d1), color = "darkturquoise", size= 1)+
+  geom_vline(xintercept = c , color = "purple", linetype = "dashed")+
+  theme_bw()+ylim(-1,NA)+
+  labs(x = "X", y = "discriminant")+
+  annotate(geom = "text", x = 3, y = 6, label = "c = 2.48", color = "purple", size = 3)
+```
+
+```{r  fig.height = 2.25}
+d %>% mutate(y = 0) %>% 
+ggplot(aes(x = X, color = Y) )+geom_jitter(aes(x= X, color = Y,y = y), alpha = .55, size = 2, height = .01)+geom_function(fun = density0, color = "salmon")+geom_function(fun = density1)+theme_bw()+labs(y = "density")+geom_vline(xintercept = c , color = "purple", linetype = "dashed")
+```
+
+\pause
+
+- Why don't discriminant functions intersect at the same point as density curves?
