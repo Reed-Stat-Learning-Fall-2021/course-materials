@@ -48,6 +48,23 @@ e. Now suppose that we wish to make a prediction for a test observation by creat
 *********************************************
 
 
+a. With 1 predictor, restricting data to within 10% of the range of that predictor corresponds to 10% of all available observations, on average.
+
+b. Since $X_1$ and $X_2$ are uniformly distributed in the unit interval, then we expect 10% of observations to have values of $X_1$ within a given interval of length $0.1$, and similarly, 10% of observations to have values of $X_2$ within a given interval of length $0.1$. Since $X_1$ and $X_2$ are independent, then we expect only about 1% of all observations to have values of $X_1$ and $X_2$ within their respective intervals.
+
+c. Proceeding as in part b., note that for each $1 \leq i \leq 100$, only 10% of observations will have values of $X_i$ in the appropriate interval of length 0.1. Since all predictors are independent, then only $0.1^{100} \times 100$ percent of observations will be available. 
+
+d. In order for two points to be "close" in $p$-dimensional Euclidean space, they need to be close in each of $p$-dimensions. As demonstrated above, the fraction of available observations that are "close" to a given point decays exponentially in $p$. Counteracting this therefore requires exponential increases in data sizes as $p$ increases.
+
+e. Conversely, in order to use 10% of the data in $p$-dimensional space, we must use a hypercube with sides of length $0.1^{1/p}$. But this quantity tends to $1$ as $p$ increases. In particular, 
+
+|  p  |  length |
+|-----|---------|
+| 1   | 0.1     |
+| 2   | 0.316   |
+| 100 | 0.977   |
+
+With 100 predictors, we must use 97.7% of the available range for each predictor!
 
 
 *********************************************
@@ -89,7 +106,35 @@ e. Suppose that an email has 16% probability of being spam. What are the odds th
 
 *********************************************
 
+a. Since the coefficients on $\beta_1$ and $\beta_3$ are negative, then having an email addressed to more than one recipient and having more dollar signs make an email less likely to be spam (in the presence of other variables). Conversely, since the coefficents on $\beta_2$ and $\beta_4$ are positive, then having a large number of people on the email and having urgent in the subject line makes the email more likely to be spam (again, in the presence of other variables).
 
+b. 
+
+```{r}
+log_odds <- -2.05-1.91*0+.02*2-.07*1+2.66*0
+log_odds
+
+prob <- exp(log_odds)/(1 + exp(log_odds))
+prob
+```
+
+The log-odds of the given email being spam are `r log_odds` and the probability of the email being spam is `r prob`.
+
+c. There is exactly a 50% chane that email is spam if the log-odds are 0. Setting the log-odds linear equation equal to 0 and solving for $X_2$ gives
+
+$$
+X_2 = \frac{2.05 +1.91\cdot 0 + 0.07 \cdot 1  + 2.66 \cdot 0 }{0.02} = \frac{2.12}{.02} = 106
+$$
+
+d. If the odds of being spam are 0.37, then the probability of an email being spam is
+$$
+\textrm{prob} = \frac{\textrm{odds}}{1 + \textrm{odds}} = \frac{.37}{1.37} = 0.27
+$$
+
+e. If an email has probability 0.16 of being spam, the odds that it is spam are
+$$
+\textrm{odds} = \frac{\textrm{prob}}{1 - \textrm{prob}} = \frac{.16}{.84} = 0.19
+$$
 
 
 *********************************************
@@ -155,6 +200,117 @@ h. Construct an ROC curve for your logistic regression model.
 
 
 *********************************************
+
+a. 
+
+```{r}
+cw_log_reg <- glm(start ~. -country -year + I(exports^2), 
+                  data = war, family = "binomial")
+
+summary(cw_log_reg)$coefficients
+```
+
+All predictors used in the model except `dominance` appear to be significant at the 5% level.
+
+b. 
+
+```{r}
+India75 <- war %>% filter(country == "India", year == "1975")
+
+predict(cw_log_reg, India75, type = "response")
+```
+The model predicts a probability 0.35 for civil war in India in 1975.
+
+
+```{r}
+India75_school <- war %>% filter(country == "India", year == "1975") %>% 
+        mutate(schooling = schooling + 30)
+
+predict(cw_log_reg, India75_school, type = "response")
+```
+The model now predicts a probability of 0.173 for civil war in India in 1975, if schooling were 30 points higher.
+
+```{r}
+India75_exports <- war %>% filter(country == "India", year == "1975") %>% 
+        mutate(schooling = exports + .1)
+
+predict(cw_log_reg, India75_exports, type = "response")
+```
+The model now predicts a probability of 0.626 for civil war in India in 1975, if the ratio of exports to GDP was 0.1 higher.
+
+c. 
+
+```{r}
+Nigeria65 <- war %>% filter(country == "Nigeria", year == "1965")
+
+predict(cw_log_reg, Nigeria65, type = "response")
+```
+The model predicts a probability 0.17 for civil war in Nigeria in 1965.
+
+```{r}
+Nigeria65_school <- war %>% filter(country == "Nigeria", year == "1965") %>% 
+        mutate(schooling = schooling + 30)
+
+predict(cw_log_reg, Nigeria65_school, type = "response")
+```
+
+The model now predicts a probability 0.07 for civil war in Nigeria in 1965, if schooling was 30 points higher.
+
+```{r}
+Nigeria65_exports <- war %>% filter(country == "Nigeria", year == "1965") %>% 
+        mutate(schooling = exports + 0.1)
+
+predict(cw_log_reg, Nigeria65_exports, type = "response")
+```
+
+The model now predicts a probability 0.2 for civil war in Nigeria in 1965, if the ratio of exports to GDP was 0.1 higher.
+
+d. The logistic regression model gives a non-linear relationship between predicted values and response. As a result, the amount the response changes when predictors are changed by a fixed amount may depend on the values of the predictors. Moreover, the log-odds are not even linear in `exports`, since we incorporated a quadratic export term in the model. 
+
+e. 
+
+Note we need to drop N/A values in order to make predictions.
+
+```{r}
+war_no_na <- war %>% drop_na()
+
+cw_probs<-predict(cw_log_reg, war_no_na, type = "response")
+cw_preds<-ifelse(cw_probs >= 0.5, "1", "0")
+
+library(yardstick)
+cw_results <- data.frame(obs = as.factor(war_no_na$start), preds = cw_preds, probs = cw_probs)
+conf_mat(cw_results, truth = obs, estimate = preds)
+
+```
+f. 
+
+```{r}
+acc <- cw_results %>% accuracy(truth = obs, estimate = preds) %>% pull(.estimate)
+1- acc
+```
+
+The model has an error rate of `r 1- acc` on the training set.
+
+g. On the **whole** data set, the pundit's predictions have an error rate of 0.067
+
+```{r}
+mean(war$start == 1, na.rm = T)
+```
+On the data set used to construct the model, the pundit's predictions also have an error rate of 0.067 (albeit slightly larger when rounded to more than 4 digits).
+
+```{r}
+mean(war_no_na$start == 1, na.rm = T)
+```
+
+
+h.
+
+```{r}
+r <- roc_curve(cw_results, truth = obs, estimate = probs, event_level = "second" )
+autoplot(r)
+
+roc_auc(data = cw_results, truth = obs, probs, event_level = "second")
+```
 
 
 
