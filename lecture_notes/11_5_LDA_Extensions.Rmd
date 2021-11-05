@@ -1,7 +1,7 @@
 ---
-title: "Linear Discriminant Analysis"
+title: "LDA Extensions"
 author: "Nate Wells"
-date: "November 3rd, 2021"
+date: "November 5th, 2021"
 institute: "Math 243: Stat Learning"
 fontsize: 9pt
 output: 
