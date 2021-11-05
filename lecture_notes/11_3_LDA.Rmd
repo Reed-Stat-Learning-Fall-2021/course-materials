@@ -111,7 +111,7 @@ $$
 
 ### Example
 
-Suppose a test for a certain disease has specificity $.9$ and sensitivity $.8$, and that the disease has prior prevalence of $0.01$. Find the posterior probability that an individual who tests positive for the disease actually has the disease.
+Suppose a test for a certain disease has specificity $.8$ and sensitivity $.95$, and that the disease has prior prevalence of $0.01$. Find the posterior probability that an individual who tests positive for the disease actually has the disease.
  
 
 ## The Bayesian Flip
