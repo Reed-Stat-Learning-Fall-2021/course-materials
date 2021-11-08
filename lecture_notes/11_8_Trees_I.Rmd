@@ -454,3 +454,55 @@ There are two ways to select the **best** subtree.
 \pause
 
 2. Choose the *smallest* tree with MSE within 1 standard deviation of smallest MSE
+
+
+## Pruning Example
+
+How does MSE vary as tree size changes?
+
+```{r, fig.height=3, cache  = F}
+package(tree)
+my_tree <- tree( )
+set.seed(100)
+
+my_tree_cv<-cv.tree(my_tree)
+plot(my_tree_cv, type = 'b')
+```
+
+What are the test MSEs for the full tree and the subtree with 5 terminal nodes?
+
+```{r}
+Full_Tree_MSE <- mean((tree_preds - my_$Pollution_Removal_oz)^2, na.rm = T)
+data.frame(Full_Tree_MSE)
+```
+
+
+```{r}
+prune_my_tree<-prune.tree(my_tree , best = 5)
+small_tree_preds<-predict(prune_my_tree, newdata = small_pdxTrees_tst)
+small_Tree_MSE <- mean((small_tree_preds - small_pdxTrees_tst$Pollution_Removal_oz)^2, na.rm = T)
+data.frame(small_Tree_MSE)
+```
+
+
+## Comparison
+
+```{r out.width = "100%"}
+par(mfrow=c(1,2))
+plot(prune_my_tree)
+text(prune_my_tree, pretty = 0, cex = .5)
+plot(my_tree)
+text(my_tree, pretty = 0, cex = .5)
+```
+
+## Comparison 2
+
+```{r}
+par(mfrow=c(1,2))
+plot(small_pdxTrees_trn$Tree_Height, small_pdxTrees_trn$Crown_Base_Height, pch=19, xlab="Tree Height", ylab = "Crown Height", cex = .5, col = "darkgrey")
+partition.tree(prune_my_tree, label="Species", add=TRUE)
+
+
+plot(small_pdxTrees_trn$Tree_Height, small_pdxTrees_trn$Crown_Base_Height, pch=19, xlab="Tree Height", ylab = "Crown Height", cex = .5, col = "darkgrey")
+partition.tree(my_tree, label="Species", add=TRUE)
+```
