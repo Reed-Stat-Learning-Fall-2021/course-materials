@@ -319,6 +319,42 @@ Why did the tree model outperform the linear model?
 
 Nevertheless, what are some downsides to the tree model?
 
+
+## Extra Practice
+
+The `mtcars` dataset gives the `mpg`, `hp`, and `wt` for 32 car models.
+
+\pause
+
+In small groups, draw the predictor space corresponding to the following tree, predicting `mpg` based on `wt` and `hp`.
+
+```{r echo = FALSE, fig.align="center", fig.height = 3}
+my_cars <- mtcars %>% as.data.frame()
+t3<-rpart(mpg ~ hp + wt, data = my_cars)
+rpart.plot(t3, extra = 0)
+```
+
+What would you expect the signs of the corresponding regression slopes to be?
+
+## Results
+
+```{r}
+library(parttree)
+ggplot(data = my_cars, aes(x = wt, y = hp, fill = mpg, color = mpg))+geom_point()+
+  geom_parttree(data =t3, aes(fill = mpg), alpha = .25)+theme_bw()
+```
+
+
+ \small
+
+```{r}
+m2 <- lm(mpg ~ hp + wt, data = mtcars)
+summary(m2)$coef
+```
+
+
+# Pruning
+
 ## The general tree algorithm
 
 1.  Begin with the entire data set $S$ and search every value of every predictor to cut $S$ into two groups $S_1$ and $S_2$ that minimizes sum of squred error:
