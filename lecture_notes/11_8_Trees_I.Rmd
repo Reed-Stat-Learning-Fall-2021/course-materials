@@ -1,0 +1,420 @@
+---
+title: "Classification and Regression Trees"
+author: "Nate Wells"
+date: "November 8th, 2021"
+institute: "Math 243: Stat Learning"
+fontsize: 9pt
+output: 
+  beamer_presentation:
+    includes:
+      in_header: preamble.tex    
+graphics: yes    
+    
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = FALSE,
+	fig.align = "center",
+	message = FALSE,
+	cache = F,
+	fig.width = 6,
+	fig.height = 4,
+	warning = FALSE,
+	out.width = "70%"
+)
+library(tidyverse)
+library(knitr)
+library(ggthemes)
+library(ISLR)
+library(ggforce) 
+```
+
+## Outline
+
+In today's class, we will...
+
+- Discuss decision trees as a non-parametric model
+
+- Investigate pruning algorithms for improving accuracy of trees
+
+
+
+
+# Decision Trees
+
+## Guess my favorite film or novel
+
+At the start of the term, you were tasked with asking each each other a series of yes-or-no questions in order to deduce each person's favorite book or movie.
+
+\pause
+
+- Each of your guessing algorithms forms a (partial) decision tree.
+  
+  - Yes/No questions represent a branching point or node
+  
+  
+  - The final guess represents the prediction
+
+\pause
+
+- What makes an effective question?
+
+  \pause
+
+  - Separates data into roughly equal sizes
+  
+  - Data in each group relatively are similar
+  
+  - Later questions should be based on answers to earlier questions.
+
+  - Early questions are general, later questions are specific.
+
+
+## My Favorite Book
+
+Previously asked questions:
+
+1. Is it set in the UK? **No**
+
+2. Is it about a sick day? **No**
+
+3. Does it take place on an island? **No**
+
+4. Is it set in California? **No**
+
+5. Are there any gunshots in the book? **No**
+
+6. Is the book less than 200 pages? **No**
+
+\pause
+
+As class, decide on up to 6 more questions to ask about the book. Then submit your guess on a slip of paper.
+
+\pause
+
+
+# Regression Trees
+
+## Regression Trees
+
+Basic regression trees partition data into smaller groups that are homogeneous with respect to predictors. 
+
+\pause
+
+- They then make predictions based on average value of response in each group
+
+\pause
+
+The most common technique is the Classification and Regression Tree (CART) method.
+
+\pause
+
+1. The method begins with the entire data set $S$ and searches every value of every predictor to cut $S$ into two groups $S_1$ and $S_2$ that minimizes sum of squared error:
+$$
+\textrm{SSE} = \sum_{i \in S_1}(y_i - \bar{y}_1)^2 + \sum_{i \in S_2}(y_i - \bar{y}_2)^2
+$$
+
+\pause
+
+2. The method then repeats step 1 for each of the two groups $S_1$ and $S_2$.  
+
+\pause
+
+3. The method continues splitting groups until each subdivision has few observation (or another predetermined stopping condition is met)
+
+## Trees on Trees
+
+We use a subset of the `pdxTrees` dataset from the `pdxTrees` repo (maintained by K. McConville, I. Caldwell, and N. Horton)
+
+```{r out.width = "2in"}
+include_graphics("img/reedTree.jpeg")
+```
+
+\pause
+
+- The data was collected by the Portland Parks and Rec’s *Urban Forestry Tree Inventory Project*. 
+
+- The Tree Inventory Project has gathered data on Portland trees since 2010, collecting this data in the summer months with a team of over 1,300 volunteers and city employees.
+ 
+## `pdxTrees` Data
+
+- The `pdxTrees` dataset is too large to install alongside the package. Instead, the package provides helper loading functions: \small
+
+  - `get_pdxTrees_parks()` pulls data on 25,534 trees from 174 Portland parks
+
+  - `get_pdxTrees_streets()` pulls data on 218,602 trees along Portland streets
+
+\pause
+\normalsize
+
+- To keep things manageable, we'll focus on trees in parks nearby Reed.
+
+
+\footnotesize
+```{r echo = T}
+library(pdxTrees)
+my_pdxTrees <- get_pdxTrees_parks(park = c("Kenilworth Park", "Westmoreland Park",
+                                           "Woodstock Park","Berkeley Park", "Powell Park"))
+```
+\pause
+\vspace{1 em}
+
+\columnsbegin
+\column{.35\textwidth}
+
+\small
+
+- How many observations?
+
+\footnotesize
+```{r echo = T}
+dim(my_pdxTrees)
+```
+
+\pause
+\small
+
+- What variables are present?
+
+\footnotesize
+
+```{r echo = T, eval = F}
+names(my_pdxTrees)
+```
+
+\vspace{6 em}
+
+\column{.6 \textwidth}
+
+\pause
+
+\tiny
+
+```{r}
+names(my_pdxTrees)
+```
+\columnsend
+
+## Carbon Sequestration
+
+- Can we predict carbon sequestration based on other tree features?
+
+```{r fig.width = 9, fig.height = 5, out.width = "85%"}
+g1 <- ggplot(my_pdxTrees, aes(x = Crown_Width_EW, y = Carbon_Sequestration_lb ))+geom_point(alpha =.5, shape = 16)+theme_bw()
+
+g2<-ggplot(my_pdxTrees, aes(x = Tree_Height, y = Carbon_Sequestration_lb ))+geom_point(alpha =.5, shape = 16)+theme_bw()
+
+g3<-ggplot(my_pdxTrees, aes(  x = Carbon_Sequestration_lb ))+geom_histogram(color = "white", bins = 20)+theme_bw()
+
+g4<-ggplot(my_pdxTrees, aes(  y = Tree_Height, x = Crown_Width_EW, color = Carbon_Sequestration_lb ))+geom_point(alpha =.75, shape = 16)+theme_bw()+
+  scale_colour_viridis_c(begin = .15, end = .8, option = "magma", name = "Carbon")
+
+library(gridExtra)
+grid.arrange(g1,g2,g3,g4,ncol =2)
+```
+
+## An Old Friend
+
+This seems like a good time to implement linear regression:
+
+\pause
+
+\tiny
+
+
+```{r echo = T}
+tree_lm<-lm(Carbon_Sequestration_lb ~Crown_Width_EW + Tree_Height, data=my_pdxTrees)
+summary(tree_lm)
+```
+
+## Diagnostic Plots
+
+\footnotesize
+
+```{r echo = T}
+library(gglm)
+gglm(tree_lm)
+```
+
+\pause
+
+- Concerns?
+
+## Regression Tree
+
+```{r out.width = "90%"}
+library(rpart)
+library(rpart.plot)
+my_tree <- rpart(Carbon_Sequestration_lb ~ Tree_Height + Crown_Width_EW, data = my_pdxTrees,
+                 control = rpart.control(maxdepth = 5))
+
+rpart.plot(my_tree,extra = 0, box.palette = "-Pu")
+```
+
+- Leaves at the bottom of the tree provide predictions
+
+## Another Visualization
+
+
+```{r out.width = "90%"}
+library(parttree)
+g4+
+  geom_parttree(data =my_tree, aes(fill=Carbon_Sequestration_lb,flipaxes = TRUE), alpha = 0.2 )+scale_colour_viridis_c(aesthetics = c('fill'), option = "magma", name = "Pred", begin = 0, end = 1 )
+```
+
+## Interpretation
+
+- `Crown_Width_EW` is the most important factor contributing to `Carbon_Sequestration_lb`
+
+
+- After accounting for width, `Tree_Height` has some impact on `Carbon_Sequestration_lb`
+
+
+- Given a narrow tree, shorter trees tend to have lower `Carbon_Sequestration_lb`
+
+
+- Given wide tree, moderately tall trees have largest `Carbon_Sequestration_lb`
+
+## Tree Accuracy
+
+Let's create a test set consisting of parks further from Reed:
+
+\footnotesize
+```{r echo = T}
+my_pdxTrees_test <- get_pdxTrees_parks(park = c("Mt Scott Park", "Glenwood Park"))
+```
+
+
+```{r}
+tree_preds<-predict(my_tree, newdata = my_pdxTrees_test)
+```
+
+$$
+\textrm{MSE} = \frac{1}{n} \sum_{i = 1}^n (y_i - \hat{y}_i)^2
+$$
+
+```{r}
+Tree_rMSE <- sqrt(mean((tree_preds - my_pdxTrees_test$Carbon_Sequestration_lb)^2, na.rm = T))
+data.frame(Tree_rMSE)
+```
+
+\pause
+
+And compared to the linear model:
+
+```{r}
+lm_preds<-predict(tree_lm, new_data =my_pdxTrees_test )
+
+lm_rMSE<-sqrt(mean((lm_preds - my_pdxTrees_test$Pollution_Removal_oz)^2, na.rm = T))
+data.frame(lm_rMSE)
+```
+
+\pause
+
+Why did the tree model outperform the linear model?
+
+\pause
+
+Nevertheless, what are some downsides to the tree model?
+
+## The general tree algorithm
+
+1.  Begin with the entire data set $S$ and search every value of every predictor to cut $S$ into two groups $S_1$ and $S_2$ that minimizes sum of squred error:
+$$
+\textrm{SSE} = \sum_{i \in S_1}(y_i - \bar{y}_1)^2 + \sum_{i \in S_2}(y_i - \bar{y}_2)^2
+$$
+
+\pause
+
+2. Repeat step one on both $S_1$ and $S_2$. 
+
+
+\pause
+
+3. Repeat on the new regions.
+
+
+\pause
+
+4. ...
+
+\pause
+
+5. Stop?
+
+\pause
+
+How do we decide when to abort algorithm?
+
+\pause
+
+Consider the RSS of a **big** tree. How might training and test RSS compare?
+
+## Subtrees
+
+A **subtree** is a regression tree obtained by removing some of the branches and nodes from the full regression tree. 
+
+  \pause
+
+  - Compare test and training RSS between full tree and a subtree.
+
+\pause
+
+Like the best subset selection algorithm for linear models, we can improve test RSS by exhaustively searching all subtrees for the best performing model.
+
+  \pause
+  
+  - But this search is actually even more computationally expensive than best subset!
+  
+\pause
+
+- So we instead restrict our attention to those subtrees most likely to improve RSS
+
+ 
+
+
+## Pruning Algorithm
+
+Once a tree is fully grown, we *prune* it using *cost-complexity tuning*
+
+  \pause
+
+  - The goal is to find a tree of optimal size with the smallest error rate.
+  
+  \pause
+  
+  - We consider a sequence of trees indexed by a tuning parameter $\alpha$.
+  
+\pause
+
+For each value of $\alpha$, there exists a unique subtree $T$ of the full tree $T_0$ that minimizes
+$$
+\mathrm{RSS} + \alpha |T|
+$$
+where $|T|$ is the number of terminal nodes of the tree $T$.
+
+  \pause
+  
+  - That is, $\alpha$ penalizes a tree based on its number of terminal nodes.
+  
+\pause
+
+- As $\alpha$ increases from $0$ (i.e. the full tree), branches get pruned in a predictable way, making for relatively quick computation.
+
+\pause
+
+- We can find the optimal value of $\alpha$ using cross-validation
+
+\pause
+
+There are two ways to select the **best** subtree.
+
+\pause
+
+1. Choose the tree with smallest MSE.
+
+\pause
+
+2. Choose the *smallest* tree with MSE within 1 standard deviation of smallest MSE
