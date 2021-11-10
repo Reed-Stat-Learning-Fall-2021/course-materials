@@ -1,0 +1,450 @@
+---
+title: "Classification and Regression Trees"
+author: "Nate Wells"
+date: "November 8th, 2021"
+institute: "Math 243: Stat Learning"
+fontsize: 9pt
+output: 
+  beamer_presentation:
+    includes:
+      in_header: preamble.tex    
+graphics: yes    
+    
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = FALSE,
+	fig.align = "center",
+	message = FALSE,
+	cache = F,
+	fig.width = 6,
+	fig.height = 4,
+	warning = FALSE,
+	out.width = "70%"
+)
+library(tidyverse)
+library(knitr)
+library(ggthemes)
+library(ISLR)
+library(ggforce) 
+```
+
+## Outline
+
+In today's class, we will...
+
+- Investigate pruning algorithms for improving accuracy of trees
+
+- Create and prune decision trees in R
+
+
+ 
+
+ 
+
+
+
+ 
+ 
+
+# Pruning
+
+## The general tree algorithm
+
+1.  Begin with the entire data set $S$ and search every value of every predictor to cut $S$ into two groups $S_1$ and $S_2$ that minimizes sum of squred error:
+$$
+\textrm{SSE} = \sum_{i \in S_1}(y_i - \bar{y}_1)^2 + \sum_{i \in S_2}(y_i - \bar{y}_2)^2
+$$
+
+\pause
+
+2. Repeat step one on both $S_1$ and $S_2$. 
+
+
+\pause
+
+3. Repeat on the new regions.
+
+
+\pause
+
+4. ...
+
+\pause
+
+5. Stop?
+
+\pause
+
+How do we decide when to abort the algorithm?
+
+\pause
+
+Consider the RSS of a **big** tree. How might training and test RSS compare?
+
+## Subtrees
+
+A **subtree** is a regression tree obtained by removing some of the branches and nodes from the full regression tree. 
+
+  \pause
+
+  - Compare test and training RSS between full tree and a subtree.
+
+\pause
+
+Like the best subset selection algorithm for linear models, we can improve training RSS by exhaustively searching all subtrees for the best performing model.
+
+  \pause
+  
+  - But this search is actually even more computationally expensive than best subset!
+  
+\pause
+
+- So we instead restrict our attention to those subtrees most likely to improve RSS
+
+ 
+
+
+## Pruning Algorithm
+
+Once a tree is fully grown, we *prune* it using *cost-complexity tuning*
+
+  \pause
+
+  - The goal is to find a tree of optimal size with the smallest error rate.
+  
+  \pause
+  
+  - We consider a sequence of trees indexed by a tuning parameter $\alpha$.
+  
+\pause
+
+For each value of $\alpha$, there exists a unique subtree $T$ of the full tree $T_0$ that minimizes
+$$
+\mathrm{RSS} + \alpha |T|
+$$
+where $|T|$ is the number of terminal nodes of the tree $T$.
+
+  \pause
+  
+  - That is, $\alpha$ penalizes a tree based on its number of terminal nodes.
+  
+\pause
+
+- As $\alpha$ increases from $0$ (i.e. the full tree), branches get pruned in a predictable way, making for relatively quick computation.
+
+\pause
+
+- We can find the optimal value of $\alpha$ using cross-validation
+
+\pause
+
+There are two ways to select the **best** subtree.
+
+\pause
+
+1. Choose the tree with smallest MSE.
+
+\pause
+
+2. Choose the *smallest* tree with MSE within 1 standard deviation of smallest MSE
+
+
+## Trees on Trees
+
+We use a subset of the `pdxTrees` dataset from the `pdxTrees` repo (maintained by K. McConville, I. Caldwell, and N. Horton)
+
+- To keep things manageable, we'll focus on trees in 3 parks nearby Reed.
+
+
+\footnotesize
+```{r echo = T}
+library(pdxTrees)
+my_pdxTrees <- get_pdxTrees_parks(park = c("Powel Park", "Woodstock Park", "Berkeley Park"))
+```
+\pause
+
+\normalsize
+
+- And use trees from another park as a test set:
+
+\footnotesize
+```{r echo = T}
+my_pdxTrees_test <- get_pdxTrees_parks(park = c("Glenwood Park"))
+```
+
+```{r out.width = "90%"}
+library(rpart)
+library(rpart.plot)
+my_tree <- rpart(Carbon_Sequestration_lb ~ Tree_Height + Crown_Width_EW, data = my_pdxTrees)
+```
+
+\normalsize
+
+\pause
+
+- Can we predict carbon sequestration based on `Tree_Height` and `Crown_Width_EW`?
+ 
+ 
+
+
+
+
+## Pruning Example
+
+How does MSE vary as tree size changes?
+
+```{r out.width = "60%", fig.width = 8}
+plotcp(my_tree)
+```
+
+- What are the test MSEs for the full tree and the subtrees with 5 and 7 terminal nodes?
+
+\footnotesize
+
+```{r}
+library(yardstick)
+results <- data.frame(model = "full", obs = my_pdxTrees_test$Carbon_Sequestration_lb, preds = predict(my_tree, my_pdxTrees_test))
+
+pruned_tree <- prune(my_tree, cp = .021)
+results <- results %>% rbind(data.frame(model = "pruned", obs  = my_pdxTrees_test$Carbon_Sequestration_lb, preds = predict(pruned_tree, my_pdxTrees_test)))
+
+very_pruned_tree <- prune(my_tree, cp = .041)
+results <- results %>% rbind(data.frame(model = "very pruned", obs  = my_pdxTrees_test$Carbon_Sequestration_lb, preds = predict(very_pruned_tree, my_pdxTrees_test)))
+
+results %>% group_by(model) %>% rmse(truth = obs, estimate = preds)
+```
+
+## Comparison
+
+```{r out.width = "90%", fig.width = 9, fig.height = 4}
+par(mfrow=c(1,3))
+rpart.plot(my_tree, main = "Full Tree")
+rpart.plot(pruned_tree, main = "Pruned Tree")
+rpart.plot(very_pruned_tree, main = "Very Pruned Tree")
+```
+
+# Trees in R
+
+## Creating Tree Models in R
+
+There are two common packages for creating regression trees in R: `tree` and `rpart`. 
+
+\pause
+
+- The `tree` package is one of the oldest packages on CRAN. It is a (tiny) bit easier to use. But allows far less customization. ISLR uses `tree`. (Traditional)
+
+\pause
+
+- The `rpart` package is newer, computationally faster, and has more options. It also can be combined with other packages for **much** nicer plots. Applied Predictive Modeling uses `rpart`. (Recommended)
+
+## Trees using `rpart``
+
+- To fit a tree using variables `Tree_Height`, `Crown_Width_EW`, `Crown_Width_NS`, `Crown_Base_Height`:
+
+\footnotesize
+```{r echo = T}
+set.seed(1)
+library(rpart)
+tree_model1 <- rpart(Carbon_Sequestration_lb ~ 
+                       Tree_Height + Crown_Width_EW + Crown_Width_NS + Crown_Base_Height, 
+                     data = my_pdxTrees)
+```
+
+\pause
+
+\normalsize
+
+- We can change several features of the tree by adding a `control` argument:
+
+\footnotesize
+```{r echo = T, eval = F}
+set.seed(1)
+tree_model2 <- rpart(Carbon_Sequestration_lb ~ 
+                       Tree_Height + Crown_Width_EW + Crown_Width_NS + Crown_Base_Height,
+                     control = rpart.control(minsplit = 30, xval = 10, maxdepth = 8),
+                     data = my_pdxTrees)
+```
+
+\pause
+
+\small
+
+- `minsplit` is the minimum number of observations in a node
+
+- `xval` is the number of cross-validation folds used
+
+- `maxdepth` is the maximum depth of any node in the final tree
+
+
+
+
+## Plots using `plot`
+
+- There are several options for visualizing trees with varying ease-of-use and aesthetics.
+
+  - The base R `plot` function quickly generates plots, but...
+  
+\pause
+
+\footnotesize
+
+```{r echo  = T, eval = F, fig.height = 4}
+plot(tree_model1)
+text(tree_model1, pretty = 0, cex = .5)
+```
+
+```{r echo  = F, fig.height = 4, fig.width = 9}
+par(mar = c(0.1, 0.1, 0.1, 0.1)) 
+plot(tree_model1)
+text(tree_model1, pretty = 0, cex = .65)
+```
+
+## Plots using `rpart.plot`
+
+- An alternative to `plot` is the `rpart.plot` function from the package of the same name:
+
+\footnotesize
+
+```{r echo = T, fig.width = 8, fig.height = 4}
+library(rpart.plot)
+rpart.plot(tree_model1)
+```
+
+\small
+
+- Some further customization available (see `?rpart.plot`)
+
+## Trees in R via `rpart` cont'd
+
+- The `rpart` function automatically performs $k$-fold CV when choosing among potential splits.
+
+\pause
+
+- To access results, append `$cptable` to the `rpart` model object:
+
+\footnotesize
+```{r echo = T}
+tree_model1$cptable
+```
+
+\pause
+
+- `CP` is the value of the complexity parameter
+
+- `nsplit` is number of splits
+
+- `rel error` is $1 - R^2$, using $R^2 = 1 - \frac{\textrm{RSS}}{\textrm{TSS}}$
+
+- `xerror` is cross-validated estimate of relative error
+
+- `xstd` is the standard deviation in `xerror` based on CV
+
+## Analyze Results
+
+- The `printcp` function displays key model information
+
+\footnotesize
+
+```{r echo = T}
+printcp(tree_model1)
+```
+## Analyze Results cont'd
+
+- Detailed listing of model parts can be accessed via `summary`:
+
+\pause
+
+\footnotesize
+
+```{r echo = T, eval = F}
+summary(tree_model1)
+```
+
+\tiny
+
+```{r }
+summary(tree_model1)
+```
+
+
+## CV Plots
+
+- We can plot the results of cross-validation using `plotcp`:
+
+\pause
+\footnotesize
+
+```{r echo = T, eval = F}
+plotcp(tree_model1)
+```
+
+```{r echo = F}
+par(mar = c(4, 4, 4, 0)) 
+plotcp(tree_model1)
+```
+
+\small
+
+- The horizontal line is 1 SE above minimum relative error
+
+## Pruning
+
+- Based on the CV plot, 6 splits with $CP = 0.039$ gives the lowest error
+
+  - While 5 splits with $CP = 0.045$ gives least splits within 1 SE of best.
+  
+\pause
+
+- We can prune our tree using the `prune` function with a given value of `cp`
+
+\pause
+
+\footnotesize
+
+```{r echo = T}
+pruned_tree <- prune(tree_model1, cp = 0.039)
+```
+
+```{r  fig.width = 8, fig.height = 4}
+par(mfrow=c(1,2))
+rpart.plot(tree_model1)
+rpart.plot(pruned_tree)
+```
+
+## Test Error Rates
+
+- How well do models do on the test data?
+
+  \pause
+
+  - Let's build a results data frame:
+  
+\footnotesize
+```{r echo = T}
+results <- data.frame(model = "full", 
+                      obs = my_pdxTrees_test$Carbon_Sequestration_lb, 
+                      preds = predict(tree_model1, my_pdxTrees_test))
+results <- rbind(results,
+                 data.frame(model = "pruned", 
+                      obs = my_pdxTrees_test$Carbon_Sequestration_lb, 
+                      preds = predict(pruned_tree, my_pdxTrees_test)))
+```
+
+\pause
+
+\normalsize
+
+- And use `rmse` from `yardstick` to assess:
+
+\pause
+
+\footnotesize
+
+```{r echo = T}
+library(yardstick)
+results %>% group_by(model) %>% rmse(truth = obs, estimate = preds)
+```
+
