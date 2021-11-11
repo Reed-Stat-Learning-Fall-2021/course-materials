@@ -44,58 +44,71 @@ Draw an example (of your own invention) of a partition of two-dimensional featur
 
 ***************************************************
 
-## Problem 2
+
 
 # Applied
 
-## Problem 3
+
+
+
+## Problem 2
 
 In Friday's class, we estimated by eye the first split in a classification tree for the `shapes` data set constructed and plotted using the code chunk below. Now we'll check to see if our graphical intuition agrees with that of the full classification tree algorithm.
 
 ```{r}
-set.seed(75)
+set.seed(100)
+n <- 6
+circles <- data.frame(
+  shape = "circle",
+  x1 = runif(n+1, 0.05,.95),
+  x2 = runif(n+1, .25,.95 )
+)
+triangles <- data.frame(
+  shape = "triangle",
+  x1 = runif(n, 0.05,.6),
+  x2 = runif(n,  0.05,.6)
+)
+squares <- data.frame(
+  shape = "square",
+  x1 = runif(n-2, 0.0,.95),
+  x2 = runif(n-2, 0.1,.75)
+)
+shapes <- rbind(circles, triangles, squares) %>% mutate(shape = as.factor(shape))
 
-n <- 16
-x1 <- runif(n)
-x2 <- runif(n)
-group <- as.factor(sample(1:3, n, replace = TRUE))
-levels(group) <- c("circle", "triangle", "square")
-shapes <- data.frame(x1, x2, group)
-shapes[1, 2] <- .765 
-shapes[9, 1] <- .741
-shapes <- shapes[-7, ]
 
-
-
-library(ggplot2)
-ggplot(shapes, aes(x = x1, y = x2, col = group, shape = group)) +
+g<- ggplot(shapes, aes(x = x1, y = x2, col = shape, shape = shape)) +
   geom_point(size = 4) +
   scale_x_continuous(expand = c(0, 0) , limits = c(0, 1)) +
   scale_y_continuous(expand = c(0, 0), limits = c(0, 1)) +
-  scale_color_discrete(guide = "none") +
-  scale_shape_discrete(guide = "none") +
   theme_bw()
+
+g
 ```
 
-a. Use the `rpart`` package in R to fit a full unpruned tree to this data set, making splits based on the *Gini index*. Plot the resulting tree.
+a. Use the `rpart` package in R to fit a tree **of depth 2 or 3** to this data set, making splits based on the *Gini index* (the default for `rpart`). *You will need to change the minimum split to something more appropriate, since the default is 20 will produce a tree with no splits.* Plot the resulting tree.
 
-b. Two commonly suggested splits for this data are to make a horizontal split around $X_2 \approx 0.50$ and a vertical split around $X_1 \approx 0.30$. Was either of these the first split decided upon by your classification tree?
+b. Use `geom_segment` in `ggplot2` to recreate the plot above with partition boundaries (the `ggplot` above is saved as the object `g`. You can recreate the plot in your answer just by adding multiple `geom_segment()` layers to `g`  graphic, i.e. `g + geom_segment()...` )
 
-c. What is the benefit of the second split in the tree?
+c. Two commonly suggested splits for this data are to make a horizontal split around $X_2 \approx 0.5$ and a vertical split around $X_1 \approx 0.5$. Was either of these the first split decided upon by your classification tree?
 
-d. Which class would this model predict for the new observation with $X_1 = 0.21, X_2 = 0.56$?
+d. What is the benefit of the second split in the tree?
 
-e. Now refit the tree based on the *information* as the splitting criterion (you set this in the `parms` argument of the `rpart`()` function). Plot the resulting tree. Why does this tree differ from the tree fit based on the Gini Index?
+e. Which class would this model predict for the new observation with $X_1 = 0.21, X_2 = 0.56$?
 
-*************************************************
-
-
+f. Which classes are easiest to predict based your tree? Which classes are hard to predict or distinguish between?
 
 
 *************************************************
 
+ 
 
-## Problem 4
+
+
+
+*************************************************
+
+
+## Problem 3
 *Based on ISLR Exercise 8.9*
 
 This problem uses the `OJ` (as in Orange Juice, not the 1990s murder trial defendant) data set from the `ISLR2` package. If you haven't used `ISLR2` before, you may need to first install the package by running the code `install.packages("ISLR2")`.
@@ -129,3 +142,26 @@ h. Create a pruned tree corresponding to the size you selected in the previous p
 i. Compare the training error rates between the pruned and unpruned trees. Which is higher? Explain why this occurs.
 
 j. Compare the test error rates between the pruned and unpruned trees. Which is higher. Explain why this occurs.
+
+## Probelm 4
+
+For this exercise, we will use the `College` data from the ISLR package. Familiarize yourself with this dataset before performing analysis. We will attempt to predict the `Outstate` variable, which indicates the college's out-of-state tutition rate in 1995. Load the data with the following code:
+
+```{r}
+library(ISLR2)
+data("College")
+```
+
+a. Split the data into a training and test set.
+
+b. Create the following **four** models on the training data and tune relevant hyperparameters using cross-validation.
+
+- The full linear model
+
+- A well-tuned LASSO model
+
+- A well-tuned KNN model
+
+- A well-tuned decision tree
+
+c. Calculate the test RMSE for each model and compare. Which model performs best on test data? What features seem most important for determining out-of-state tuition?
