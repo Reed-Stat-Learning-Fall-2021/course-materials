@@ -1,0 +1,441 @@
+---
+title: "Classification and Regression Trees"
+author: "Nate Wells"
+date: "November 12th, 2021"
+institute: "Math 243: Stat Learning"
+fontsize: 9pt
+output: 
+  beamer_presentation:
+    includes:
+      in_header: preamble.tex    
+graphics: yes    
+    
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = FALSE,
+	fig.align = "center",
+	message = FALSE,
+	cache = F,
+	fig.width = 6,
+	fig.height = 4,
+	warning = FALSE,
+	out.width = "70%"
+)
+library(tidyverse)
+library(knitr)
+library(ggthemes)
+library(ISLR)
+library(ggforce) 
+```
+
+## Outline
+
+In today's class, we will...
+
+- Discuss classification trees for classification problems.
+
+- Build handmade classification tree models
+
+
+# Classification Trees
+
+
+  
+## Classification Trees
+
+Classification trees are very similar to regression trees, except the terminal nodes predict levels of a categorical variable, rather than values of a quantitative variable
+
+\pause
+
+- To *grow* a classification tree, we need to make cuts based on a metric other than RSS (why?)
+
+\pause
+
+- For each split candidate, we average the value of the metric on the two proposed subregions, and select the split that minimizes the average value of the metric.
+
+\pause
+
+- The most natural choice is to use *Classification Error Rate* $E$ (i.e. proportion of obs. in region not in most common class)
+  $$E  = 1 - \textrm{max}_k(p_{mk} ) \quad \textrm{ where }\hat p_{mk} = \textrm{prop. obs. in region m in class k}$$
+
+  \pause
+
+  - But because of the greedy algorithm used to split trees, $E$ tends to overfit to noise in the training data
+  
+  
+## Other Decision Metric
+
+Two common alternatives for decision metric:
+
+\pause
+
+- The *Gini index* $G$:
+  $$G  = \sum_{i = 1}^K \hat p_{mk} (1 - \hat p_{mk}) \quad \textrm{ where }\hat p_{mk} = \textrm{prop. obs. in region m in class k}$$
+  \pause
+  
+  - It measures the rate that a random element would be incorrectly labeled if it was randomly labeled according to the distribution of labels in the region
+  
+  \pause
+  
+  - The Gini index is small if all $\hat p_{mk}$ are close to $0$ or $1$.
+  
+- The *information* or *entropy* $D$:
+  $$D = - \sum_{i = 1}^K \hat p_{mk} \log_2\hat p_{mk}   \quad \textrm{ where }\hat p_{mk} = \textrm{prop. obs. in region m in class k}$$
+  \pause
+  
+  - It measures the average amount of information conveyed by knowing the region of an observation. 
+  
+  \pause
+  
+  - The entropy is small if all $\hat p_{mk}$ are close to $0$ or $1$.
+  
+## Metrics
+
+- The following plot demonstrates sensitivity of metrics $E, G, D$ to changes in class proportion $p$.
+
+```{r fig.width = 8, fig.height = 3}
+p <- seq(0,1, length = 100)
+Error <- ifelse(p<0.5, p, 1-p)
+Gini <- 2*p*(1-p)
+Information <- ( -p*log2(p) - (1-p)*log2(1-p))/2
+metrics <- data.frame(p,Error,Gini,Information) %>% pivot_longer(!p, names_to ="Metric", values_to = "impurity")
+ggplot(metrics, aes(x = p, y = impurity, color = Metric))+
+  geom_line(size = 1)+theme_bw()
+```
+\pause
+
+- The Gini Index and Information are both more sensitive to changes in node purity than Error (represented by convexity of curves)
+
+  \pause
+
+  - Suppose we have an initial class balance of [300, 500] and make a single split into nodes  [0,100] and [300,400]
+
+  - The misclassification rate is constant, although node purity has increased
+  
+## Dealing with Categorical Variables
+
+Both regression and classification trees can easily hand either quantitative or binary categorical variables.
+
+  \pause
+
+- But with some modification, trees can also be used with multi-level categorical variables.
+
+\pause
+
+- To do so, we recode all multilevel categorical variables as a sequence of dummy binary variables. Then proceed as usual.
+
+\pause
+
+- But this conversion has a significant downside! The algorithm is biased toward making early splits on categorical variables with many levels.
+
+  \pause
+  
+  - Since trees are already prone to high variance, this additional bias can lead to unwanted increases in MSE.
+  
+\pause
+
+- The "simple" fix is to lump together levels before building a tree, using domain knowledge
+
+\pause
+
+- An alternative is to allow the model algorithm to lump together values as necessary at each node (order levels in increasing frequency, then make appropriate cut)
+
+  \pause
+  
+  - But this generally leads to less interpretable models
+
+# Classification Trees in R
+
+## Mushroom Hunting
+
+  \pause
+  
+Can I eat this?
+
+
+  
+```{r out.height="60%"}
+include_graphics("img/mushroom.jpg")
+```
+
+```{r}
+mushrooms <- read.csv("data/mushrooms_tidy.csv",stringsAsFactors=TRUE) %>% select(-X)
+```
+
+```{r}
+set.seed(2)
+library(rsample)
+mushroom_split <-initial_split(mushrooms, strata = edibility, prop = .80)
+mushrooms_train <- training(mushroom_split)
+mushrooms_test <- testing(mushroom_split)
+```
+
+
+## Mushrooms
+
+- The `mushrooms` data set contains information on `edibility` and 22 other features on 8124 samples of Mushrooms. We'll do a 80-20 training-test split.
+
+
+\pause
+
+\tiny
+
+```{r}
+glimpse(mushrooms_train)
+```
+
+
+
+\small
+
+```{r eval = F}
+library(pdxTrees)
+all_trees <- get_pdxTrees_parks()
+common_trees<-all_trees %>%   filter(Common_Name %in% c("Douglas-Fir", "Norway Maple", "Western Redcedar")) %>% select(Common_Name, Crown_Base_Height, Tree_Height) %>% mutate(Common_Name = as.factor(Common_Name))
+```
+
+
+## Implementing classfication trees in R
+
+As with regression trees, we use the `rpart`` package.
+
+\footnotesize
+
+```{r echo  = T, fig.width = 8, out.width = "65%" }
+library(rpart)
+library(rpart.plot)
+mushroom_tree<-rpart(edibility ~ ., data = mushrooms_train)
+rpart.plot(mushroom_tree)
+```
+
+\pause
+
+\normalsize
+
+- The default parameters created data with relatively few terminal nodes.
+
+  - And it seems like we obtained good class purity!
+
+
+## Model Accuracy
+
+- How well did we do on test data?
+
+\pause
+
+\footnotesize
+```{r echo = T}
+library(yardstick)
+mushroom_preds <- predict(mushroom_tree, mushrooms_test, type = "class")
+mushroom_probs <- predict(mushroom_tree, mushrooms_test, type = "prob")[,"edible"]
+
+results <- data.frame(obs = mushrooms_test$edibility,preds = mushroom_preds,
+                      probs = mushroom_probs)
+
+accuracy(results, truth = obs, estimate = preds)
+```
+\normalsize
+
+- Looks like we have fantastic accuracy!
+
+## ROC Curve
+
+Look at that ROC curve!
+
+\footnotesize
+
+```{r echo = T}
+roc_curve(results, truth = obs, probs) %>% 
+autoplot()
+```
+
+## Confusion Matrix
+
+- Just one more thing to check:
+
+\pause
+
+\footnotesize
+
+```{r echo = T, eval = F}
+conf_mat(results, truth = obs, estimate = preds)
+```
+
+\pause
+
+```{r echo = F, eval = T}
+conf_mat(results, truth = obs, estimate = preds)
+```
+\pause
+
+```{r  out.width = "40%"}
+include_graphics("img/skull.png")
+```
+
+## Improvements
+
+How can we reduce the **type II error** of our classifier? (rate of poison mushrooms identified as `edible` )
+
+\pause
+
+- *Option 1:* Everything is poisonous!
+  
+  \pause
+  
+  - Downside: No tasty mushrooms :(
+  
+- *Option 2:* change classification threshhold
+
+  \pause
+  
+  - I.e. classify as edible only if $P(\textrm{edible}) > 99.9\%$
+  
+\pause
+  
+- *Option 3:* Incorporate relative loss in Gini index.
+
+\pause
+
+$$
+G = \sum_{i}\sum_j L(i,j)p_i p_j
+$$
+
+  \pause
+  
+  - Here, $L(i,j)$ is the loss occurred when predicting level $j$ when the truth is level $i$.
+
+## Additional Parameters
+
+- To incorporate loss, create a penalty matrix and add to the `parms` argument in `rpart`:
+
+\footnotesize
+```{r echo = T}
+penalty_matrix <- matrix(c(0,1,20,0), byrow = T, nrow = 2)
+penalty_matrix
+```
+\pause
+
+
+```{r echo = T, out.width = "70%", fig.width=9}
+mushroom_no_poison <- rpart(edibility ~., data = mushrooms_train,
+                            parms = list(loss = penalty_matrix))
+rpart.plot(mushroom_no_poison)
+```
+
+## New Results
+
+- Now how did we do?
+
+\pause
+
+```{r}
+mushroom_preds2 <- predict(mushroom_no_poison, mushrooms_test, type = "class")
+mushroom_probs2 <- predict(mushroom_no_poison, mushrooms_test, type = "prob")[,"edible"]
+results <- results %>% mutate(model = "without loss") %>% rbind(data.frame(model = "with loss", obs = mushrooms_test$edibility,preds = mushroom_preds2,probs = mushroom_probs2))
+```
+
+
+\footnotesize
+
+```{r echo = T}
+results %>% group_by(model) %>% accuracy( truth = obs, estimate = preds)
+```
+
+\pause
+
+```{r echo = T}
+results %>% filter(model == "with loss") %>% conf_mat(truth = obs, estimate = preds)
+```
+
+\pause
+
+\normalsize
+
+- But can we now improve that Type I error?
+
+  \pause
+  
+  - To reclaim some of those "poisonous" mushrooms, we'll need to build a deeper tree.
+
+## Deeper Trees
+
+- We can control tree depth by setting the minimum `cp` parameter in `rpart.control`
+
+  \pause
+  
+  - Any split that does not decrease overall lack of fit by a factor of `cp` is not attemped.
+  
+  - Setting low values of `cp` lead to deeper trees
+  
+\pause
+
+\footnotesize
+
+```{r echo = T, out.width = "70%", fig.width=9}
+mushroom_deep <- rpart(edibility ~., data = mushrooms_train,
+                       parms = list(loss = penalty_matrix),
+                       control = rpart.control(cp = .00001))
+rpart.plot(mushroom_deep)
+```
+
+## Pruning
+
+- Let's look at cross-validated relative error
+
+\pause
+
+\footnotesize
+```{r out.width = "65%"}
+plotcp(mushroom_deep)
+```
+
+\pause
+
+\normalsize
+
+- It's possible we are now overfitting. It may be best to reduce to tree with 6 leaves.
+
+\pause
+
+\footnotesize
+
+```{r echo=T}
+mushroom_prune <- prune(mushroom_deep, cp = 0.0042)
+```
+
+## Final Results
+
+- How do our deep and pruned models do?
+
+\pause
+
+\footnotesize
+
+```{r}
+
+mushroom_preds3 <- predict(mushroom_deep, mushrooms_test, type = "class")
+mushroom_probs3 <- predict(mushroom_deep, mushrooms_test, type = "prob")[,"edible"]
+results <- results %>%    rbind(data.frame(model = "deep", obs = mushrooms_test$edibility,preds = mushroom_preds3,probs = mushroom_probs3))
+
+
+mushroom_preds4 <- predict(mushroom_prune, mushrooms_test, type = "class")
+mushroom_probs4 <- predict(mushroom_prune, mushrooms_test, type = "prob")[,"edible"]
+results <- results %>%    rbind(data.frame(model = "pruned", obs = mushrooms_test$edibility,preds = mushroom_preds4,probs = mushroom_probs3))
+```
+
+```{r echo = T}
+results %>% group_by(model) %>% accuracy( truth = obs, estimate = preds)
+```
+
+```{r echo = T}
+results %>% filter(model == "deep") %>% conf_mat(truth = obs, estimate = preds)
+```
+
+```{r echo = T}
+results %>% filter(model == "pruned") %>% conf_mat(truth = obs, estimate = preds)
+```
+
+ 
