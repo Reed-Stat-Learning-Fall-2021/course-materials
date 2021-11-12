@@ -1,0 +1,63 @@
+---
+title: "Classification"
+author: "Nate Wells"
+date: "11/12/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+The plot below represents the predictor space (on $X_1$ and $X_2$) with a training data set plotted and the class of their response variable indicated by shape and color.
+
+```{r}
+set.seed(100)
+n <- 6
+circles <- data.frame(
+  shape = "circle",
+  x1 = runif(n+1, 0.05,.95),
+  x2 = runif(n+1, .25,.95 )
+)
+triangles <- data.frame(
+  shape = "triangle",
+  x1 = runif(n, 0.05,.6),
+  x2 = runif(n,  0.05,.6)
+)
+squares <- data.frame(
+  shape = "square",
+  x1 = runif(n-2, 0.0,.95),
+  x2 = runif(n-2, 0.1,.75)
+)
+shapes <- rbind(circles, triangles, squares) %>% mutate(shape = as.factor(shape))
+
+
+g<- ggplot(shapes, aes(x = x1, y = x2, col = shape, shape = shape)) +
+  geom_point(size = 4) +
+  scale_x_continuous(expand = c(0, 0) , limits = c(0, 1)) +
+  scale_y_continuous(expand = c(0, 0), limits = c(0, 1)) +
+  theme_bw()
+
+g
+```
+
+1. If we consider this a classification tree without any splits yet, what would be the prediction for every test observation?
+
+2. What is the (training) misclassificaiton rate?
+
+3. What is the Gini Index for this node?
+
+4. What is the information (entropy)?
+
+5. Add a straight line to one of your axes that splits the predictor space into two regions. Choose the split in a ay that you think will lead to the best overall improvement in metrics listed above. Label the new regions R1 and R2 and calculate the metrics for each:
+
+a. For each region, what is the predicted class?
+
+b. For each region, what is the misclassification rate?
+
+c. For each region, what is the Gini index?
+
+d. For each region, what is the information (entropy)?
+
+6. Draw the very simple regression tree corresponding to the split you made.
