@@ -73,7 +73,7 @@ squares <- data.frame(
   x1 = runif(n-2, 0.0,.95),
   x2 = runif(n-2, 0.1,.75)
 )
-shapes <- rbind(circles, triangles, squares) %>% mutate(shape = as.factor(shape))
+shapes <- rbind(circles, triangles, squares) %>% mutate(shape = factor(shape, levels = c("circle", "triangle", "square")))
 
 g<- ggplot(shapes, aes(x = x1, y = x2, col = shape, shape = shape)) +
   geom_point(size = 4) +
