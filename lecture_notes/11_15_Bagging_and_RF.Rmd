@@ -1,0 +1,470 @@
+---
+title: "Bagging and Random Forests"
+author: "Nate Wells"
+date: "November 15th, 2021"
+institute: "Math 243: Stat Learning"
+fontsize: 9pt
+output: 
+  beamer_presentation:
+    includes:
+      in_header: preamble.tex    
+graphics: yes    
+    
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = FALSE,
+	fig.align = "center",
+	message = FALSE,
+	cache = F,
+	fig.width = 6,
+	fig.height = 4,
+	warning = FALSE,
+	out.width = "70%"
+)
+library(tidyverse)
+library(knitr)
+library(ggthemes)
+library(ISLR)
+library(ggforce)
+library(randomForest)
+```
+
+## Outline
+
+In today's class, we will...
+
+
+- Introduce ensemble modeling as means of improving low accuracy models
+
+- Discuss bagging and random forests as methods for reducing variance in decision trees
+
+- Implement random forests in R
+
+# Ensemble Models
+
+## Who Wants to Be a Millionaire? 
+
+- *Who Wants to Be a Millionaire* is a television gameshow that debuted in the 1990s and in which contestants answer a series of increasingly difficult multiple choice questions in order to win the grand prize of $1,000,000.
+
+
+
+```{r  out.height="2in"}
+include_graphics("img/wwtbm.jpeg")
+```
+
+## Who Wants to Be a Millionaire? 
+
+- The original show included 3 "lifeline" options contestants could use to answer questions:
+
+
+
+  - **50:50**: Two randomly selected incorrect answers are eliminated
+  
+  - **Phone a Friend**: The contestant calls a friend and is given 30 seconds to discuss
+  
+  - **Ask the Audience**:  Audience members each vote on the answer they think is correct
+
+```{r  out.height="1in"}
+include_graphics("img/lifelines.jpeg")
+```
+
+\pause
+
+- Which lifeline has the highest chance of producing the correct answer?
+
+\textcolor{white}{Why?}
+
+## Who Wants to Be a Millionaire? 
+
+- The original show included 3 "lifeline" options contestants could use to answer questions:
+
+
+
+  - **50:50**: Two randomly selected incorrect answers are eliminated
+  
+  - **Phone a Friend**: The contestant calls a friend and is given 30 seconds to discuss
+  
+  - \textcolor{blue}{\textbf{Ask the Audience}:  Audience members each vote on the answer they think is correct}
+
+```{r  out.height="1in"}
+include_graphics("img/lifelines.jpeg")
+```
+
+
+
+- Which lifeline has the highest chance of producing the correct answer?
+
+\pause
+
+Why?
+
+## Ensemble Methods
+
+- Suppose we have $m$ different models to predict $Y$ based on $X_1, \dots, X_n$. Suppose $\hat{Y}_i$ is the prediction made by the $i$th model. 
+
+\pause
+
+- A simple ensemble model makes a prediction $\hat{Y}$ as the weighted average of the predictions from each model:
+$$
+\hat{Y} = w_1 \hat{Y}_1 + \dots + w_m \hat{Y}_m \qquad  \textrm{where }w_1 + \dots w_m = 1, \quad w_i \geq 0
+$$
+\pause
+\vspace{-1em}
+- Advantages of ensemble models?
+
+  \pause
+
+  - Significantly more flexible than a single model
+  
+  - More efficient than single model
+  
+  - More resilient against model-building bias
+  
+\pause
+
+- Disadvantages?
+
+  \pause
+
+  - Making predictions is more computationally expensive
+  
+  - Favors models with low test time
+  
+  - Diminishing returns on the number models that can be incorporated in ensemble
+
+# Bagging  
+
+## Bagging
+
+Suppose we only have one training set, but still want to build an ensemble of regression tree models. How can we do it?
+
+\pause
+
+- Bagging (**B**ootstrap **agg**regation) was one of the earliest ensemble techniques
+
+\pause
+
+To create a bagged model, create many bootstrap samples from the original training set, and fit a decision tree to each. Average the resulting predictions.
+
+\pause
+
+Why?
+
+\pause
+  
+- Recall that decision trees tend to have high variance. But averaging the results of independent (or weakly dependent) variables decreases variance 
+  
+  - Think about the Central Limit Theorem
+  
+\pause
+
+- Unlike a single tree model, we do not prune (we instead control variance by averaging)
+
+
+## Test Error for Bagged Models
+
+- Recall from a previous homework that an individual observation has probability $1 - e^{-1} \approx 0.632$ of appearing in a bootstrap sample.
+
+\pause
+
+- For each bootstrap, approximately 1/3 of observations are not included (called *out-of-bag* observations)
+
+\pause
+
+- The out-of-bag observations can be used as a natural validation set for the bootstrap model.
+
+\pause
+
+- We get an overall estimate of test MSE for the bagged model by averaging the MSE of each bootstrap model on its out-of-bag observations
+
+## A Bag of Trees
+
+We return to the `pdxTrees` data set, this time expanding both our data set size and number of predictors:
+
+```{r}
+library(pdxTrees)
+my_pdxTrees <- get_pdxTrees_parks(park = c("Berkeley Park", "Woodstock Park", "Westmoreland Park", "Mt Scott Park", "Powell Park", "Kennilworth Park", "Sellwood Park", "Crystal Springs Rhododendron Garden", "Laurelhurst Park"))%>%  mutate_if(is.character, as.factor) %>%  dplyr::select(DBH, Condition, Tree_Height, Crown_Width_NS, Crown_Width_EW, Crown_Base_Height, Functional_Type, Mature_Size, Carbon_Sequestration_lb) %>% drop_na()
+```
+
+\footnotesize
+```{r echo = T}
+names(my_pdxTrees)
+dim(my_pdxTrees)
+
+set.seed(1)
+library(rsample)
+my_pdxTrees_split <- initial_split(my_pdxTrees )
+my_pdxTrees_train <- training(my_pdxTrees_split)
+my_pdxTrees_test <- testing(my_pdxTrees_split)
+```
+
+
+\pause
+\normalsize
+
+- Can we improve on our previous model predicting `Carbon_Sequestration_lb`, now using more data and more predictors?
+
+
+
+
+## Bagged pdXTrees
+  
+- Let's get a few bootstrap samples using `rsample`:
+
+\pause
+\footnotesize
+
+```{r echo = T}
+library(rsample)
+set.seed(1115)
+pdx_bootstrap <- bootstraps(my_pdxTrees_train, times = 4)
+```
+
+
+\pause
+\normalsize
+
+- And now build trees on each:
+
+\footnotesize
+
+\pause
+```{r echo = T}
+library(rpart)
+get_tree <- function(split){
+  bootstrap_sample <- analysis(split)
+  model <- rpart(Carbon_Sequestration_lb ~., data = bootstrap_sample)
+}
+pdx_bootstrap$model <- map(pdx_bootstrap$splits, get_tree)
+```
+
+
+ 
+## A few trees
+
+```{r, out.width = "85%"}
+par(mfcol = c(2, 2), mar = c(1, 1, 1, 1))
+library(rpart.plot)
+rpart.plot(pdx_bootstrap$model[[1]], box.palette = "Greens")
+rpart.plot(pdx_bootstrap$model[[2]], box.palette = "Greens")
+rpart.plot(pdx_bootstrap$model[[3]], box.palette = "Greens")
+rpart.plot(pdx_bootstrap$model[[4]], box.palette = "Greens")
+```
+
+## Performance
+
+- Let's get predictions for each bootstrap:
+
+\pause
+
+
+\footnotesize 
+
+```{r echo = T}
+get_predictions <- function(model){
+  predictions <- predict(model, my_pdxTrees_test)
+  tibble(obs = my_pdxTrees_test$Carbon_Sequestration_lb, preds = predictions)
+}
+pdx_bootstrap$predictions <- map(pdx_bootstrap$model, get_predictions)
+```
+
+\pause
+
+\normalsize
+
+- And calculate `rmse` on each using `yardstick`
+
+\pause
+
+\footnotesize
+```{r echo = T}
+library(yardstick)
+results <- map_dfr(pdx_bootstrap$predictions, rmse, obs, preds)
+results
+```
+
+```{r echo = T}
+mean(results$.estimate)
+```
+
+ 
+
+## Variation in Model Predictions
+
+- How do individual tree predictions compare?
+
+\pause
+
+\footnotesize
+
+```{r}
+some_preds <- tibble(
+  tree1 =  pdx_bootstrap[[4]][[1]]$preds,
+  tree2 = pdx_bootstrap[[4]][[2]]$preds,
+  tree3 = pdx_bootstrap[[4]][[3]]$preds,
+  tree4 = pdx_bootstrap[[4]][[4]]$preds
+) %>% rowwise() %>% mutate(bagged = mean(c_across( )))
+some_preds%>% head() 
+```
+
+\pause
+
+\normalsize
+
+- How does the bagged model RMSE compare to each individual tree's RMSE?
+
+\pause
+
+\footnotesize
+```{r}
+bagged_results <- data.frame(obs = my_pdxTrees_test$Carbon_Sequestration_lb, preds = some_preds$bagged)
+
+rbind(results, rmse(bagged_results, truth = obs, estimate = preds )) %>% mutate(model = c("tree 1", "tree 2", "tree 3", "tree 4", "bagged")) %>% select(model, everything())
+```
+
+\pause
+
+\normalsize
+
+- Note that the RMSE for the bagged tree is **NOT** simply the average RMSE. It is significantly *lower*!
+
+## The more trees the merrier?
+
+If 4 trees improved performance over 1, what if we bagged 10 trees? 100?
+
+```{r cache=T}
+set.seed(11)
+library(randomForest)
+rfmodels<-list()
+tree_size <- c(1:5,10*1:5, 75,100, 150, 200)
+for (i in tree_size){
+  rfmodels[[i]]<-randomForest(Carbon_Sequestration_lb ~ ., data = my_pdxTrees_train, ntree = i , mtry = 8, na.action = na.roughfix )
+}
+```
+
+```{r out.width="60%"}
+results <- data.frame()
+for (i in tree_size){
+  preds <-predict(rfmodels[[i]], newdata = my_pdxTrees_test)
+  obs <- my_pdxTrees_test$Carbon_Sequestration_lb
+  results <- rbind(results, data.frame(n_trees = i, preds, obs))
+}
+
+bagged_RMSE <- results  %>% group_by(n_trees) %>% rmse(truth = obs, estimate = preds) 
+
+bagged_RMSE %>% 
+ggplot( aes( x = n_trees, y = .estimate))+geom_point()+theme_bw()+geom_line()+labs(x = "Number of Trees", y = "RMSE")
+```
+
+\pause
+
+- Greatest gains by adding a small number of additional trees
+  
+- Moderately small gains thereafter
+
+# Random Forests
+
+## Further Performance Improvements
+
+Suppose we have $m$ ensemble models built from the same data set and that it turns out that all $m$ models are very similar.
+
+\pause
+
+- Do we expect the ensemble model to have high or low variance?
+
+  \pause 
+  
+  - High variance (since the models are very correlated)
+  
+\pause
+
+- When bagging trees, if one predictor accounts for large amount of deviation in the response, it will usually be selected as the first split (regardless of the bootstrap sample used)
+
+\pause
+
+- To artificially increase the variety among trees, we randomly restrict which predictors can be used at each split point.
+
+\pause
+
+- Although counterintuitive, this restriction tends to increase accuracy of the ensemble by breaking correlations among the participant trees
+
+
+## Random Forests
+
+To create a random forest:
+
+1. Select the number of models $m$ to build and a number of predictors $k$ to use at each step $t$
+
+2. Generate a bootstrap sample for each model
+
+3. Build a tree on the bootstrap sample where at each step, a random selection of $k$ of the $p$ predictors can be used (independent of prior predictors selected)
+
+4. Aggregate the models to create an ensemble model.
+
+\pause
+
+Advantages of the random forest?
+
+  \pause
+  
+  - Individual models are less correlated, so ensemble has lower variance
+  
+  - Each tree is quicker to build (why?)
+  
+\pause
+
+Disadvantages?
+
+  \pause
+  
+  - Difficult to interpret
+  
+  - Theoretically properties less well-studied (possible Senior Thesis project!)
+  
+## Hand-drawn Example
+
+# Bagging and Random Forests in R
+
+## Random Forest in R
+
+- To create both bagged trees and random forests, we use the `randomForest` function in the `randomForest` package in R:
+
+\footnotesize
+
+```{r echo = T, cache = T}
+library(randomForest)
+rfmodel <- randomForest(Carbon_Sequestration_lb ~ ., data = my_pdxTrees_train)
+rfmodel
+```
+
+## Modifications
+
+We can control how many trees are generated with `ntree =` and the number of predictors at each split with `mtry=`
+
+  \pause
+  
+  - By default, `randomForest` uses $p/3$ predictors for regression and $\sqrt{p}$ predictors for classification
+  
+  \pause
+  
+\small
+
+```{r echo = T, cache = T}
+set.seed(1)
+rfmodel2 <- randomForest(Carbon_Sequestration_lb ~ ., data = my_pdxTrees_train,
+                         ntree = 10, mtry = 5)
+rfmodel2
+```
+
+\pause
+
+\normalsize 
+
+How can we create a bagged model using the `randomForest` function?
+
+  \pause
+  
+  - Set `mtry= p`, where `p` is the total number predictors available
