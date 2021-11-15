@@ -442,7 +442,7 @@ rfmodel
 
 ## Modifications
 
-We can control how many trees are generated with `ntree =` and the number of predictors at each split with `mtry=`
+We can control how many trees are generated with `ntree` and the number of predictors at each split with `mtry`
 
   \pause
   
@@ -450,7 +450,7 @@ We can control how many trees are generated with `ntree =` and the number of pre
   
   \pause
   
-\small
+\footnotesize
 
 ```{r echo = T, cache = T}
 set.seed(1)
@@ -468,3 +468,112 @@ How can we create a bagged model using the `randomForest` function?
   \pause
   
   - Set `mtry= p`, where `p` is the total number predictors available
+  
+## Making predictions
+
+- So you have your `randomForest` model. How do you make predictions?
+
+\footnotesize
+
+```{r echo = T}
+my_preds<- predict(rfmodel, my_pdxTrees_test)
+results <- data.frame(obs =  my_pdxTrees_test$Carbon_Sequestration_lb, preds = my_preds)
+
+results %>% head()
+```
+
+## Variable Importance
+
+Bagging and Random Forests increase prediction accuracy by reducing variance of the model. 
+
+  \pause
+  
+  - But the cost comes in interpretability We no longer have a single decision tree to follow to reach our prediction. 
+  
+  \pause
+  
+  - How can we determine which predictors are most influential?
+  
+\pause
+
+One possibility is to record the total amount of RSS/Purity that is decreased due to splits of the given predictor, averaged across all trees in the random forest.
+
+
+## Importance in R
+
+\columnsbegin
+\column{.45\textwidth}
+\footnotesize
+
+```{r echo = T}
+importance(rfmodel)
+```
+
+\pause
+
+\column{.45\textwidth}
+
+\footnotesize
+
+```{r echo=T, eval = F, out.width = "45%"}
+varImpPlot(rfmodel)
+```
+
+```{r echo=F, out.width = "90%"}
+par(mfcol = c(1, 1), mar = c(1, 1, 1, 1))
+varImpPlot(rfmodel)
+```
+
+\columnsend
+
+\normalsize
+
+\pause
+
+- For regression trees, node impurity is calculated using RSS. 
+
+- For classification trees, node impurity is calculated using Gini Index.
+
+## Comparison of Bagged Trees versus Random Forests
+
+
+```{r cache = T}
+set.seed(271)
+library(randomForest)
+rfmodels2<-list()
+tree_size <- c(10*1:5, 75,100, 150, 200, 300, 400, 500)
+for (i in tree_size){
+  rfmodels2[[i]]<-randomForest(Carbon_Sequestration_lb ~ ., data = my_pdxTrees_train, ntree = i, mtry = 4, na.action = na.roughfix )
+}
+
+rfmodels<-list()
+for (i in tree_size){
+  rfmodels[[i]]<-randomForest(Carbon_Sequestration_lb ~ ., data = my_pdxTrees_train, ntree = i , mtry = 8, na.action = na.roughfix )
+}
+```
+
+```{r}
+results_rf <- data.frame()
+for (i in tree_size){
+  preds <-predict(rfmodels2[[i]], newdata = my_pdxTrees_test)
+  obs <- my_pdxTrees_test$Carbon_Sequestration_lb
+  results_rf <- rbind(results_rf, data.frame(n_trees = i, preds, obs))
+}
+
+results <- data.frame()
+for (i in tree_size){
+  preds <-predict(rfmodels[[i]], newdata = my_pdxTrees_test)
+  obs <- my_pdxTrees_test$Carbon_Sequestration_lb
+  results <- rbind(results, data.frame(n_trees = i, preds, obs))
+}
+
+bagged_RMSE <- results  %>% group_by(n_trees) %>% rmse(truth = obs, estimate = preds) 
+
+rf_RMSE <- results_rf  %>% group_by(n_trees) %>% rmse(truth = obs, estimate = preds) %>% mutate(model = "Random Forest")
+
+my_RMSE <- bagged_RMSE %>% mutate(model = "Bagged") %>% rbind(rf_RMSE) 
+
+my_RMSE %>% 
+ggplot( aes( x = n_trees, y = .estimate, color = model))+geom_point()+theme_bw()+geom_line()+labs(x = "Number of Trees", y = "RMSE")
+```
+
