@@ -1,0 +1,479 @@
+---
+title: "Bagging and Random Forests"
+author: "Nate Wells"
+date: "November 15th, 2021"
+institute: "Math 243: Stat Learning"
+fontsize: 9pt
+output: 
+  beamer_presentation:
+    includes:
+      in_header: preamble.tex    
+graphics: yes    
+    
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = FALSE,
+	fig.align = "center",
+	message = FALSE,
+	cache = F,
+	fig.width = 6,
+	fig.height = 4,
+	warning = FALSE,
+	out.width = "70%"
+)
+library(tidyverse)
+library(knitr)
+library(ggthemes)
+library(ISLR)
+library(ggforce)
+library(randomForest)
+library(yardstick)
+library(rpart)
+```
+
+## Outline
+
+In today's class, we will...
+
+
+- Implement random forests in R
+
+- Investigate boosting as an **learning** method for improving decision trees
+  
+ 
+
+# Bagging and Random Forests in R
+
+## Random Forests
+
+To create a random forest:
+
+1. Select the number of models $m$ to build and a number of predictors $k$ to use at each step $t$
+
+2. Generate a bootstrap sample for each model
+
+3. Build a tree on the bootstrap sample where at each step, a random selection of $k$ of the $p$ predictors can be used (independent of prior predictors selected)
+
+4. Aggregate the models to create an ensemble model.
+
+\pause
+
+```{r}
+#Include graphic of random forest
+```
+
+  
+
+## Random Forest in R
+
+```{r}
+library(pdxTrees)
+my_pdxTrees <- get_pdxTrees_parks(park = c("Berkeley Park", "Woodstock Park", "Westmoreland Park", "Mt Scott Park", "Powell Park", "Kennilworth Park", "Sellwood Park", "Crystal Springs Rhododendron Garden", "Laurelhurst Park"))%>%  mutate_if(is.character, as.factor) %>%  dplyr::select(DBH, Condition, Tree_Height, Crown_Width_NS, Crown_Width_EW, Crown_Base_Height, Functional_Type, Mature_Size, Carbon_Sequestration_lb) %>% drop_na()
+```
+
+\footnotesize
+```{r}
+set.seed(10)
+library(rsample)
+my_pdxTrees_split <- initial_split(my_pdxTrees )
+my_pdxTrees_train <- training(my_pdxTrees_split)
+my_pdxTrees_test <- testing(my_pdxTrees_split)
+```
+
+- To create both bagged trees and random forests, we use the `randomForest` function in the `randomForest` package in R:
+
+\footnotesize
+
+```{r echo = T, cache = T}
+library(randomForest)
+rfmodel <- randomForest(Carbon_Sequestration_lb ~ ., data = my_pdxTrees_train)
+rfmodel
+```
+
+## Modifications
+
+We can control how many trees are generated with `ntree` and the number of predictors at each split with `mtry`
+
+  \pause
+  
+  - By default, `randomForest` uses $p/3$ predictors for regression and $\sqrt{p}$ predictors for classification
+  
+  \pause
+  
+\footnotesize
+
+```{r echo = T, cache = T}
+set.seed(1)
+rfmodel2 <- randomForest(Carbon_Sequestration_lb ~ ., data = my_pdxTrees_train,
+                         ntree = 10, mtry = 5)
+rfmodel2
+```
+
+\pause
+
+\normalsize 
+
+How can we create a bagged model using the `randomForest` function?
+
+  \pause
+  
+  - Set `mtry= p`, where `p` is the total number predictors available
+  
+## Making predictions
+
+- So you have your `randomForest` model. How do you make predictions?
+
+\footnotesize
+
+```{r echo = T}
+my_preds<- predict(rfmodel, my_pdxTrees_test)
+results <- data.frame(obs =  my_pdxTrees_test$Carbon_Sequestration_lb, preds = my_preds)
+
+results %>% head()
+```
+
+## Variable Importance
+
+Bagging and Random Forests increase prediction accuracy by reducing variance of the model. 
+
+  \pause
+  
+  - But the cost comes in interpretability. We no longer have a single decision tree to follow to reach our prediction. 
+  
+  \pause
+  
+  - How can we determine which predictors are most influential?
+  
+\pause
+
+One possibility is to record the total amount of RSS/Purity that is decreased due to splits of the given predictor, averaged across all trees in the random forest.
+
+
+## Importance in R
+
+\columnsbegin
+\column{.45\textwidth}
+\footnotesize
+
+```{r echo = T}
+importance(rfmodel)
+```
+
+\pause
+
+\column{.45\textwidth}
+
+\footnotesize
+
+```{r echo=T, eval = F, out.width = "45%"}
+varImpPlot(rfmodel)
+```
+
+```{r echo=F, out.width = "90%"}
+par(mfcol = c(1, 1), mar = c(1, 1, 1, 1))
+varImpPlot(rfmodel)
+```
+
+\columnsend
+
+\normalsize
+
+\pause
+
+- For regression trees, node impurity is calculated using RSS. 
+
+- For classification trees, node impurity is calculated using Gini Index.
+
+## Comparison of Bagged Trees versus Random Forests
+
+
+```{r cache = T}
+set.seed(1010)
+library(randomForest)
+rfmodels2<-list()
+tree_size <- c(10*1:5, 75,100, 150, 200, 300, 400, 500)
+for (i in tree_size){
+  rfmodels2[[i]]<-randomForest(Carbon_Sequestration_lb ~ ., data = my_pdxTrees_train, ntree = i, mtry = 4, na.action = na.roughfix )
+}
+
+rfmodels<-list()
+for (i in tree_size){
+  rfmodels[[i]]<-randomForest(Carbon_Sequestration_lb ~ ., data = my_pdxTrees_train, ntree = i , mtry = 8, na.action = na.roughfix )
+}
+```
+
+```{r}
+results_rf <- data.frame()
+for (i in tree_size){
+  preds <-predict(rfmodels2[[i]], newdata = my_pdxTrees_test)
+  obs <- my_pdxTrees_test$Carbon_Sequestration_lb
+  results_rf <- rbind(results_rf, data.frame(n_trees = i, preds, obs))
+}
+
+results <- data.frame()
+for (i in tree_size){
+  preds <-predict(rfmodels[[i]], newdata = my_pdxTrees_test)
+  obs <- my_pdxTrees_test$Carbon_Sequestration_lb
+  results <- rbind(results, data.frame(n_trees = i, preds, obs))
+}
+
+bagged_RMSE <- results  %>% group_by(n_trees) %>% rmse(truth = obs, estimate = preds) 
+
+rf_RMSE <- results_rf  %>% group_by(n_trees) %>% rmse(truth = obs, estimate = preds) %>% mutate(model = "Random Forest")
+
+my_RMSE <- bagged_RMSE %>% mutate(model = "Bagged") %>% rbind(rf_RMSE) 
+
+my_RMSE %>% 
+ggplot( aes( x = n_trees, y = .estimate, color = model))+geom_point()+theme_bw()+geom_line()+labs(x = "Number of Trees", y = "RMSE")
+```
+
+
+# Boosting
+
+## Motivation
+
+Suppose you have a model which, given a binary classification dataset, always returned a classifier with training error strictly lower than 50%.
+
+\pause
+
+- Can one use it to build a strong classifier that has error close to 0?
+
+\pause
+
+```{r out.width = "40%"}
+include_graphics("img/shapepuzzle.jpg")
+```
+
+
+## AdaBoost
+
+In the 1990s, Shapire and Freund developed algorithms to do just that.
+
+\pause
+
+- Their algorithm (AdaBoost) generates a sequence of weak classifiers, where at each iteration the algorithm finds the best classifier based on the current sample weights. 
+
+  \pause
+  
+  - Observations that are incorrectly classifed in the $k$th iteration recieve more weight in the $(k+1)$th iteration.
+  
+\pause
+
+- The overall sequence of classifiers are combined into an ensemble which as high chance of classifying more accurately than any individaul model in the list.
+
+\pause
+
+- The algorithm relies on using a sequence of **weak** learners (low variance, high bias)
+
+  \pause
+
+  - In the tree setting, we can create weak learners by restricting the depth of the tree.
+  
+## AdaBoost Graphic
+
+```{r out.width = "90%"}
+include_graphics("img/adaboost.png")
+```
+
+## Boosting for regression
+
+Boosting also works in the regression setting. The **gradient boosting machine** is a boosting algorithm that works as follows:
+
+1. Select tree depth $D$ and number of iterations $K$.
+
+2. Compute the average response $\hat{y}$ and use this as the initial predicted value for each observation
+
+3. Compute the residual for each observation.
+
+4. Fit a regression tree of depth $D$, using the **residuals** as the response.
+
+5. Predict each observation using the regression tree from the previous step.
+
+7. Update the predicted value of each observation by adding the previous iteration's predicted value to the predicted value generated in the previous step.
+
+8. Repeat at total of $K$ times.
+
+## Brief Example
+
+\small
+
+Compute the mean:
+
+\footnotesize
+```{r echo = T}
+mu <- mean(my_pdxTrees_train$Carbon_Sequestration_lb)
+mu
+```
+
+\pause
+\small
+Compute residuals:
+\footnotesize
+```{r echo = T}
+my_pdxTrees_train_boost <- my_pdxTrees_train %>% 
+  mutate(residuals1 = Carbon_Sequestration_lb - mu)
+```
+
+
+\pause
+\small
+Fit a new tree
+\footnotesize
+```{r echo = T }
+boost_tree_model<- rpart(residuals1 ~ Crown_Base_Height, 
+                   data = my_pdxTrees_train_boost, 
+                   control = rpart.control(maxdepth = 2))
+```
+
+\pause
+\small
+Predict
+\footnotesize
+```{r echo = T}
+predictions<- predict(boost_tree_model, data = my_pdxTrees_test)+mu
+```
+
+\pause
+\small
+And so on...
+
+## Boosting Properties
+
+Boosting is similar to random forests: the final prediction is sum of predictions from an ensemble of models.
+
+  \pause 
+  
+  - But in Random Forests, all trees are created independently, are of maximum depth, and contribute equally to the final model.
+  
+  \pause
+  
+  - In boosting, subsequent trees are are highly dependent on past trees, have minimal depth, and contribute unequally.
+  
+\pause
+
+Unlike random forests, boosting is susceptible to over-fitting (since it uses a greedy algorithm to maximize gradient at each step).
+
+\pause
+
+- To remedy, we introduce a shrinkage penalty (like in Ridge Regression/LASSO)
+
+  \pause
+  
+  - Instead of adding the full value for a sample to the previous iteration's predicted value, only a fraction of the current predicted value is added.
+  
+  \pause
+  
+  - This fraction is called the *learning rate* $\lambda$, with $0 < \lambda < 1$. (Typical values range from $0.001$ to $0.01$)
+
+
+## Boosting in R
+
+We use the `gbm` function in the `gmb` package to create Boosted Trees
+
+  \pause
+  
+  - For regression problems, we use the argument `distribution = "gaussian"` and for classification problems, we use `distribution = "bernoulli"`
+  
+  \pause
+  
+  - The argument `n.trees` controls the number of iterations
+  
+  - The argument `interaction.depth` controls the depth of each tree
+  
+  - The argument `shrinkage` controlls the learning rate $\lambda$
+  
+
+  
+\pause
+
+\small
+
+```{r echo = T}
+library(gbm)
+set.seed(10101)
+boosted_tree<-gbm(Carbon_Sequestration_lb ~., my_pdxTrees_train,
+                  distribution = "gaussian", 
+                  n.trees=1000, 
+                  interaction.depth = 3,
+                  shrinkage = .02)
+```
+
+## Summary Information
+
+\footnotesize
+
+```{r echo = T, eval = F, out.width = "60%"}
+summary(boosted_tree )
+```
+
+```{r echo = F, out.width = "60%"}
+summary(boosted_tree, plotit = F)
+```
+
+```{r echo = F, out.width = "60%"}
+par( mar = c(4, 6, 1, 1))
+summary(boosted_tree, plotit = T, las = 2,  cex.names=.6, cex.lab = .7, cex.axis = .7)
+```
+
+
+## Boosted Tree Performance
+
+\small
+
+- How does the boosted tree do vs Random Forest? A pruned tree? A linear model?
+
+\footnotesize
+
+```{r}
+my_preds_rf<- predict(rfmodels2[[500]], my_pdxTrees_test)
+my_preds_bt<- predict(boosted_tree, my_pdxTrees_test)
+
+my_lm <- lm(Carbon_Sequestration_lb~., data = my_pdxTrees_train)
+my_preds_lm <- predict(my_lm, my_pdxTrees_test)
+
+my_tree <- rpart(Carbon_Sequestration_lb ~., data = my_pdxTrees_train, control = rpart.control(cp = .005))
+my_preds_tr <- predict(my_tree, my_pdxTrees_test)
+
+results <- data.frame(obs = my_pdxTrees_test$Carbon_Sequestration_lb, 
+                      random_forest = my_preds_rf, 
+                      boosted_tree = my_preds_bt,
+                      linear_model = my_preds_lm,
+                      pruned_tree = my_preds_tr) %>% pivot_longer(!obs, names_to = "model", values_to = "preds")
+```
+
+\pause
+
+
+
+```{r echo = T}
+results %>% group_by(model) %>% rmse(truth = obs, estimate = preds) %>% arrange(.estimate)
+```
+
+\pause
+
+\small
+
+- This behavior is typical. Boosted trees and Random Forests often have comparable performance, and both tend to be more accurate than other model types
+
+\pause
+
+- However, this performance comes at significant cost of interpretability.
+
+\pause
+
+- Note that boosted trees have a number of important hyperparameters: `n.trees`, `interaction.depth`, `shrinkage`. 
+
+  \pause
+  
+  - How do we find the best values of these hyperparameters?
+
+  \pause
+
+  - Cross-validation!
+  
+  \pause
+
+  - But tuning all three parameters by "hand" with `rsample` is tedious. We need a more powerful cv engine
