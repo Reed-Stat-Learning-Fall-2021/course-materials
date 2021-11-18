@@ -1,0 +1,270 @@
+---
+title: "Midterm Exam 2"
+author: ""
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(knitr)
+library(tidyverse)
+```
+
+# Read through the entirety of this exam before getting started
+
+## Exam Logistics
+
+*Reprinted from course website*
+
+1. The exam will be **lightly cumulative**, but with emphasis on material covered since the first midterm. In particular, it will focus on Chapters 4, 6 and 8.1 of ISLR, including topics we discussed in class through Friday 11-12.
+
+2. The exam will be made available on GitHub at 5pm PDT on Friday, 11-19. A link to the exam will be posted in the `#announcements` channel on Slack.
+
+3. You must submit your completed exam via pushing any commits to GitHub prior to 9:00am PDT on Monday, 11-22.
+
+4. This is a timed exam. You may take up to 3 hours to work on the exam between Friday and Monday. This time does not need to be spent consecutively. However, if you take a break from the exam, you should not spend the time during that break working on the exam, reviewing notes, or actively thinking about the problems.
+
+5. You are responsible for keeping track of your own time on the exam and will be asked to provide an estimate for the total amount of time you spent.
+
+
+6. You may freely consult the following references during the exam:
+  - Your ISLR and Applied Predictive Modeling textbooks
+  - Any course notes **you** have taken for this class
+  - Cheatsheats or notes from other classes, provided **you** were the one to create the notes
+  - Lecture slides on the course website
+  - Homework problems you have submitted
+  - Built-in RStudio help files and cheatsheets
+  
+7. You may not consult any other resources, including (but not limited to):
+  - Classmates
+  - Tutors
+  - Other faculty
+  - Other textbooks
+  - Online help (stackexchange, message boards, slack, etc.)
+  
+  
+8. If you run into problems while taking the exam, document the problem in your exam and message me on slack. I will try to respond as soon as I can, but can't guarantee I will available at that moment.
+
+
+
+*******************************************************
+
+## Instructions 
+
+Each of the following 3 problems will be worth approximately equal number of points. Compose your answer to each problem between the bars of red stars. Show your work and justify your answers.
+
+
+## Problem 1
+
+In this problem, you will simulate data from a *logistic regression* model. It may be helpful to reference the code from Lab 2 that we used to simulate from a least squares regression model.
+
+The following code chunk generates 200 predictor values for the simulated model. **Do not change the seed value.**
+
+```{r}
+set.seed(1010)
+x1 <- runif(200, 0,1) #Predictor X1
+x2 <- runif(200, 0,1) #Predictor X2
+sim_data<-data.frame(x1,x2) #Data frame of predictor values
+```
+
+The goal of this problem is to simulate data from a logistic regression model with parameters $\beta_0 = -7$, $\beta_1 = 2$ and $\beta_2 = 3$. 
+
+a. Write the mathematical formula for the conditional probability function $p(X)$ for this model.
+
+b. Write an R function which takes as input the values of the predictors `X1` and `X2` and outputs the conditional probability that $Y$ takes the value $1$, given those values. Plot the values of your probability function on the simulated data.
+
+c. Use `mutate` to add a column to your `sim_dat` data frame containing the conditional probability of $Y=1$ given the values of $X_1$ and $X_2$. 
+d. In this part, generate values of the response $Y$ using your conditional probabilities and add the results to the data frame `sim_data`. Use the following code as template to do so: 
+
+```{r}
+example_df<-data.frame(p = c(.2, .4, .6, .8)) #This creates a column of probabilities p
+
+example_df<-example_df %>% 
+  rowwise() %>% #This allows you to mutate entries in the data frame one row at a time
+  mutate(Y = sample(0:1, size = 1, prob = c(1-p, p))) #This creates a sample in each row 
+    #with the given probability of getting Y = 1.
+
+example_df
+#Run this code chunk several times to convince yourself that in each row, Y has the indicated
+#probability of taking the value 1
+```
+
+
+e. Create a scatterplot of your simulated data, using color to denote the values of $Y$. Estimate a reasonable linear decision boundary (just based on inspection of the graph, no calculation necessary) and add it to the plot using `geom_abline`. 
+
+f. Fit a logistic regression model to `sim_data`. How do the coefficients of your fitted model compare to the original parameters $\beta_0 = -7$, $\beta_1 = 2$ and $\beta_2 = 3$?
+
+g. Compute the training error rate on your simulated data. How do you think this compares to the theoretical Bayes classifier error rate?
+
+h. Use LOOCV to estimate the test error for the logistic regression model. How does this compare to your training error rate?
+
+i. Create an ROC curve for the logistic regression model. What seems to be the optimal trade-off between specificity and sensitivity? Do you think this corresponds to a decision threshold greater than or less than $p = 0.5$? 
+
+*******************************************************
+
+ 
+
+ 
+
+ 
+
+*******************************************************
+
+## Problem 2
+
+Infrared (IR) spectroscopy technology is used to determine the chemical makeup of a substance. The theory of IR spectroscopy holds that unique molecular structures absorb IR frequencies differently. In practice a spectrometer fires a series of different IR frequencies into a sample material, and the device measures the absorbency of the sample at each individual frequency. This series of measurements creates a spectrum profile which can then be used to determine the chemical makeup of the sample material.
+
+A particular IR instrument was used to analyze 215 samples of meat across 100 frequencies (corresponding to wavelengths between 850 and 1050 nm). The frequency spectra for 6 samples are shown below, along with the percent fat content of the sample, as determined by analytic chemistry.
+
+```{r}
+include_graphics("fat.png")
+```
+
+If researchers can determine a predictive relationship between IR spectrum and fat content, then food scientists could predict a sample's fat content with IR instead of more expensive analytic chemistry.
+
+The following code chunk loads the `irdata`, which contains absorption values at 100 different frequencies, as well as fat content, for 215 meat samples. Additionally, it seperates the data into training and test sets.
+
+```{r message = F}
+irdata<-read_csv("irdata.csv")
+
+library(rsample)
+set.seed(1119)
+ir_split <- initial_split(irdata)
+ir_train <- training(ir_split)
+ir_test <- testing(ir_split)
+```
+
+a. Based on the graphic shown above, what is the approximate relationship between the average absorption of a sample and its fat content? Are there any outliers to this trend?
+
+b. The `irdata` contains 100 predictors (one for each IR frequency) on 215 observations. Based on the graphic above, do these predictors appear to be uncorrelated? (Think very carefully about how predictors are represented in this graph)  What influence do you think this may have on model accuracy, especially in light of the sample size?
+
+c. Fit a full linear model. Create and analyze the diagnostic plots for this model. 
+
+d. Explain why it would be computationally infeasible to perform best subset selection. Instead, use either forward or selection to create an array of linear regression models. 
+
+e. The `get_model_formula` function takes 3 arguments (a number of predictors, a `regsubsets` object, and the name of the response variable) and will extract the model formula for the best performing regression model of the given number of predictors in the `regsubsets` object.
+
+```{r}
+#Run this code to import the get_model_formula function
+source('get_model_formula.R')
+```
+
+For example, the following code chunk extracts the formula for the best 3 variable linear model predicting `mpg` in the `mtcars` dataset (which can then be copy-pasted into the appropriate argument of `lm` to create a linear model)
+
+```{r eval = F }
+#Example
+data(mtcars)
+library(leaps)
+my_mtmodels<-regsubsets(mpg~.,data=mtcars)
+get_model_formula(3,my_mtmodels,"mpg")
+```
+Based on your forward/backward selection process, choose an optimal subset of variables and fit the corresponding linear model. Be sure to use the `get_model_formula` helper function to assist creating the formula for your model.
+
+
+f. Perform ridge regression and LASSO and use cross-validation to find the optimal regression penalty. Create parameter path plots, along with cross-validated error plots, for each model.
+
+h. Compute the MSE of each of your models from parts (c) - (f) on the **test** data. Which model has the best predictive accuracy? Which model has the worst? What traits do each of the best performing models have in common? Explain why this makes sense, based on your answer to part (b).
+
+ 
+***********************************
+
+
+
+
+
+***********************************
+
+
+
+
+
+## Problem 3
+
+Your goal in this problem is to create an email spam filter, which blocks unwanted and unsolicited email (advertisements, scams, chain letters, pornography etc.) while still allows legitimate emails to pass through. The following data set was compiled from David Diez's Gmail Account, early months of 2012, and consists of 20 predictors on 3921 emails.
+
+```{r}
+email <- read_csv("email.csv")
+```
+
+Below is a description of all variables that appear in the data set. 
+
+- `spam` Indicator for whether the email was spam.
+
+- `to_multiple` Indicator for whether the email was addressed to more than one recipient.
+
+- `from` Whether the message was listed as from anyone (this is usually set by default for regular outgoing email).
+
+- `cc` Number of people cc'ed.
+
+- `sent_email` Indicator for whether the sender had been sent an email in the last 30 days.
+
+- `time` Time at which email was sent.
+
+- `image` The number of images attached.
+
+- `attach` The number of attached files.
+
+- `dollar` The number of times a dollar sign or the word “dollar” appeared in the email.
+
+- `winner` Indicates whether “winner” appeared in the email.
+
+- `inherit` The number of times “inherit” (or an extension, such as “inheritance”) appeared in the email.
+
+- `viagra` The number of times “viagra” appeared in the email.
+
+- `password` The number of times “password” appeared in the email.
+
+- `num_char` The number of characters in the email, in thousands.
+
+- `line_breaks` The number of line breaks in the email (does not count text wrapping).
+
+- `format` Indicates whether the email was written using HTML (e.g. may have included bolding or active links).
+
+- `re_subj` Whether the subject started with “Re:”, “RE:”, “re:”, or “rE:”
+
+- `exclaim_subj` Whether there was an exclamation point in the subject.
+
+- `urgent_subj` Whether the word “urgent” was in the email subject.
+
+- `exclaim_mess` The number of exclamation points in the email message.
+
+- `number` Factor variable saying whether there was no number, a small number (under 1 million), or a big number.
+
+***********************************
+
+```{r}
+my_lm <- glm(spam ~., data = email, family = "binomial")
+```
+
+```{r}
+summary(my_lm)
+```
+
+```{r}
+library(rpart)
+library(rpart.plot)
+
+my_tree <- rpart(spam ~., data = email)
+```
+
+```{r}
+rpart.plot(my_tree)
+```
+
+***********************************
+
+
+
+
+
+## Problem 4
+
+ 
+
+***********************************
+
+
+
+
+
+***********************************
