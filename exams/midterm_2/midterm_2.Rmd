@@ -56,7 +56,14 @@ Each of the following 3 problems will be worth approximately equal number of poi
 
 ## Problem 1
 
-In this problem, you will simulate data from a *logistic regression* model. It may be helpful to reference the code from Lab 2 that we used to simulate from a least squares regression model.
+In this problem, you will simulate data from a *LDA* model.
+
+Here, we assume that our response Y has three levels A, B, and C, and that we have two predictors $X_1$ and $X_2$. The common covariance matrix is $\begin{pmatrix}1 & 0.5 \\ 0.5 & 1 \end{pmatrix}$, which means that $X_1$ and $X_2$ both individual have variance of $1$, and that the correlation between $X_1$ and $X_2$ is $0.5$.
+
+Assume that the means of $X_1$ and $X_2$ 
+
+In this problem, you will simulate data from a *logistic regression* model. 
+
 
 The following code chunk generates 200 predictor values for the simulated model. **Do not change the seed value.**
 
@@ -180,15 +187,15 @@ h. Compute the MSE of each of your models from parts (c) - (f) on the **test** d
 
 ## Problem 3
 
-Your goal in this problem is to create an email spam filter, which blocks unwanted and unsolicited email (advertisements, scams, chain letters, pornography etc.) while still allows legitimate emails to pass through. The following data set was compiled from David Diez's Gmail Account, early months of 2012, and consists of 20 predictors on 3921 emails.
+Your goal in this problem is to create an email spam filter, which blocks unwanted and unsolicited email (advertisements, scams, chain letters, pornography etc.) while still allows legitimate emails to pass through. The following data set was compiled from David Diez's Gmail Account, early months of 2012, and consists of 19 predictors and 1 response on 3921 emails.
 
 ```{r}
-email <- read_csv("email.csv")
+email <- read_csv("email.csv") %>% mutate(spam = as.factor(spam))
 ```
 
 Below is a description of all variables that appear in the data set. 
 
-- `spam` Indicator for whether the email was spam.
+- `spam` Indicator for whether the email was spam. This is the response variable.
 
 - `to_multiple` Indicator for whether the email was addressed to more than one recipient.
 
@@ -197,8 +204,6 @@ Below is a description of all variables that appear in the data set.
 - `cc` Number of people cc'ed.
 
 - `sent_email` Indicator for whether the sender had been sent an email in the last 30 days.
-
-- `time` Time at which email was sent.
 
 - `image` The number of images attached.
 
@@ -230,26 +235,29 @@ Below is a description of all variables that appear in the data set.
 
 - `number` Factor variable saying whether there was no number, a small number (under 1 million), or a big number.
 
+
+a. Choose 4 of the predictors above and create appropriate visualizations showing their individual distribution, as well as their relationship to the response `spam`. What are some trends demonstrated by the plots? Based on your preliminary analysis, which predictor do you think would be most helpful in classifying spam?
+
+b. Randomly divide the data into a training and test set using a 75-25 ratio. Be sure to set a seed to ensure reproducibility.
+
+c. Fit a logistic regression model predicting `spam` as a function of other variables. Create a confusion matrix on test data, compute the test error rate, and create an ROC curve.
+
+d. Based on your findings in part (a), explain why neither a LDA nor a QDA model would be appropriate for this data.
+
+e. Fit a tuned KNN classification model predicting `spam` as a function of other variables. Create a confusion matrix on test data, compute the test error rate, and create an ROC curve.
+
+f. Fit a pruned classification tree predicting `spam` as a function of other variables. Create a confusion matrix on test data, compute the test error rate, and create an ROC curve.
+
+g. Compare the results of the previous steps. Which model had the highest accuracy? Did any models differ significantly in their sensitivity or specificity?
+
+h. In the context of an email spam filter, which type of misclassification error is worse: classifying a legitimate email as spam, or classifying a spam email as legitimate? Explain how you could modify one of the procedures in part (c), (e), or (f) to reduce this type of error.
+
+
 ***********************************
 
-```{r}
-my_lm <- glm(spam ~., data = email, family = "binomial")
-```
+ 
 
-```{r}
-summary(my_lm)
-```
 
-```{r}
-library(rpart)
-library(rpart.plot)
-
-my_tree <- rpart(spam ~., data = email)
-```
-
-```{r}
-rpart.plot(my_tree)
-```
 
 ***********************************
 
@@ -259,7 +267,7 @@ rpart.plot(my_tree)
 
 ## Problem 4
 
- 
+Towards the end of an introductary statistics class (like Math 141), many students are eager to continue investigating statistics, but are unsure what types of things are covered in future classes. Choose one topic that we've studied thus far this semester, and in a **3 - 4 paragraph** response, summarize this topic and explain how it relates to the broader themes of a Statistical Learning course, as well as how it extends a concept first seen in an Intro Statistics class. The target audience for your answer should be a Math 141 student who is interested in taking Math 243. 
 
 ***********************************
 
