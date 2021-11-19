@@ -56,11 +56,7 @@ Each of the following 3 problems will be worth approximately equal number of poi
 
 ## Problem 1
 
-In this problem, you will simulate data from a *LDA* model.
 
-Here, we assume that our response Y has three levels A, B, and C, and that we have two predictors $X_1$ and $X_2$. The common covariance matrix is $\begin{pmatrix}1 & 0.5 \\ 0.5 & 1 \end{pmatrix}$, which means that $X_1$ and $X_2$ both individual have variance of $1$, and that the correlation between $X_1$ and $X_2$ is $0.5$.
-
-Assume that the means of $X_1$ and $X_2$ 
 
 In this problem, you will simulate data from a *logistic regression* model. 
 
@@ -74,13 +70,14 @@ x2 <- runif(200, 0,1) #Predictor X2
 sim_data<-data.frame(x1,x2) #Data frame of predictor values
 ```
 
-The goal of this problem is to simulate data from a logistic regression model with parameters $\beta_0 = -7$, $\beta_1 = 2$ and $\beta_2 = 3$. 
+The goal of this problem is to simulate data from a logistic regression model with parameters $\beta_0 = -5$, $\beta_1 = 6$ and $\beta_2 = 5$. 
 
 a. Write the mathematical formula for the conditional probability function $p(X)$ for this model.
 
-b. Write an R function which takes as input the values of the predictors `X1` and `X2` and outputs the conditional probability that $Y$ takes the value $1$, given those values. Plot the values of your probability function on the simulated data.
+b. Write an R function which takes as input the values of the predictors `X1` and `X2` and outputs the conditional probability that $Y$ takes the value $1$, given those values. Plot the values of your probability function for the simulated data.
 
 c. Use `mutate` to add a column to your `sim_dat` data frame containing the conditional probability of $Y=1$ given the values of $X_1$ and $X_2$. 
+
 d. In this part, generate values of the response $Y$ using your conditional probabilities and add the results to the data frame `sim_data`. Use the following code as template to do so: 
 
 ```{r}
@@ -99,21 +96,17 @@ example_df
 
 e. Create a scatterplot of your simulated data, using color to denote the values of $Y$. Estimate a reasonable linear decision boundary (just based on inspection of the graph, no calculation necessary) and add it to the plot using `geom_abline`. 
 
-f. Fit a logistic regression model to `sim_data`. How do the coefficients of your fitted model compare to the original parameters $\beta_0 = -7$, $\beta_1 = 2$ and $\beta_2 = 3$?
+f. Fit a logistic regression model for $Y$ as a function of $X_1$ and $X_2$ based on `sim_data`. How do the coefficients of your fitted model compare to the original parameters $\beta_0 = -5$, $\beta_1 = 6$ and $\beta_2 = 5$?
 
 g. Compute the training error rate on your simulated data. How do you think this compares to the theoretical Bayes classifier error rate?
 
 h. Use LOOCV to estimate the test error for the logistic regression model. How does this compare to your training error rate?
 
-i. Create an ROC curve for the logistic regression model. What seems to be the optimal trade-off between specificity and sensitivity? Do you think this corresponds to a decision threshold greater than or less than $p = 0.5$? 
 
 *******************************************************
 
  
 
- 
-
- 
 
 *******************************************************
 
@@ -135,7 +128,7 @@ The following code chunk loads the `irdata`, which contains absorption values at
 irdata<-read_csv("irdata.csv")
 
 library(rsample)
-set.seed(1119)
+set.seed(1119) #Do not change this seed
 ir_split <- initial_split(irdata)
 ir_train <- training(ir_split)
 ir_test <- testing(ir_split)
@@ -168,9 +161,9 @@ get_model_formula(3,my_mtmodels,"mpg")
 Based on your forward/backward selection process, choose an optimal subset of variables and fit the corresponding linear model. Be sure to use the `get_model_formula` helper function to assist creating the formula for your model.
 
 
-f. Perform ridge regression and LASSO and use cross-validation to find the optimal regression penalty. Create parameter path plots, along with cross-validated error plots, for each model.
+f. Perform either ridge regression or LASSO and use cross-validation to find the optimal regression penalty. Create a parameter path plot, along with a cross-validated error plot.
 
-h. Compute the MSE of each of your models from parts (c) - (f) on the **test** data. Which model has the best predictive accuracy? Which model has the worst? What traits do each of the best performing models have in common? Explain why this makes sense, based on your answer to part (b).
+h. Compute the RMSE of each of your models from parts (c), (e), and (f) on the **test** data. Which model has the best predictive accuracy? Which model has the worst? What traits do each of the best performing models have in common? Explain why this makes sense, based on your answer to part (b).
 
  
 ***********************************
@@ -189,7 +182,7 @@ h. Compute the MSE of each of your models from parts (c) - (f) on the **test** d
 
 Your goal in this problem is to create an email spam filter, which blocks unwanted and unsolicited email (advertisements, scams, chain letters, pornography etc.) while still allows legitimate emails to pass through. The following data set was compiled from David Diez's Gmail Account, early months of 2012, and consists of 19 predictors and 1 response on 3921 emails.
 
-```{r}
+```{r message = F}
 email <- read_csv("email.csv") %>% mutate(spam = as.factor(spam))
 ```
 
@@ -267,7 +260,7 @@ h. In the context of an email spam filter, which type of misclassification error
 
 ## Problem 4
 
-Towards the end of an introductary statistics class (like Math 141), many students are eager to continue investigating statistics, but are unsure what types of things are covered in future classes. Choose one topic that we've studied thus far this semester, and in a **3 - 4 paragraph** response, summarize this topic and explain how it relates to the broader themes of a Statistical Learning course, as well as how it extends a concept first seen in an Intro Statistics class. The target audience for your answer should be a Math 141 student who is interested in taking Math 243. 
+Towards the end of an introductary statistics class (like Math 141), many students are eager to continue investigating statistics, but are unsure what types of things are covered in future classes. Choose one topic that we've studied thus far this semester, and in a **2 - 3 paragraph** response, summarize this topic and explain how it relates to the broader themes of a Statistical Learning course, as well as how it extends a concept first seen in an Intro Statistics class. The target audience for your answer should be a Math 141 student who is interested in taking Math 243. 
 
 ***********************************
 
