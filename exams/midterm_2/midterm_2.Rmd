@@ -57,7 +57,7 @@ Each of the following 4 problems will be worth approximately equal number of poi
 ## Problem 1
 
 
-Your goal in this problem is to create an email spam filter, which blocks unwanted and unsolicited email (advertisements, scams, chain letters, pornography etc.) while still allows legitimate emails to pass through. The following data set was compiled from David Diez's Gmail Account, early months of 2012, and consists of 19 predictors and 1 response on 3921 emails.
+Your goal in this problem is to create an email spam filter which blocks unwanted and unsolicited email (advertisements, scams, chain letters, etc.) while still allows legitimate emails to pass through. The following data set was compiled from David Diez's Gmail Account, early months of 2012, and consists of 19 predictors and 1 response on 3921 emails.
 
 ```{r message = F}
 email <- read_csv("email.csv") %>% mutate(spam = as.factor(spam))
@@ -161,7 +161,7 @@ b. The `irdata` contains 100 predictors (one for each IR frequency) on 215 obser
 
 c. Fit a full linear model. Create and analyze the diagnostic plots for this model. 
 
-d. Explain why it would be computationally infeasible to perform best subset selection. Instead, use either forward or selection to create an array of linear regression models. 
+d. Explain why it would be computationally infeasible to perform best subset selection. Instead, use either forward or backward selection to create an array of linear regression models. 
 
 e. The `get_model_formula` function takes 3 arguments (a number of predictors, a `regsubsets` object, and the name of the response variable) and will extract the model formula for the best performing regression model of the given number of predictors in the `regsubsets` object.
 
