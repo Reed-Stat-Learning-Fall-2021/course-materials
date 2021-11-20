@@ -51,56 +51,77 @@ library(tidyverse)
 
 ## Instructions 
 
-Each of the following 3 problems will be worth approximately equal number of points. Compose your answer to each problem between the bars of red stars. Show your work and justify your answers.
+Each of the following 4 problems will be worth approximately equal number of points. Compose your answer to each problem between the bars of red stars. Show your work and justify your answers.
 
 
 ## Problem 1
 
 
+Your goal in this problem is to create an email spam filter, which blocks unwanted and unsolicited email (advertisements, scams, chain letters, pornography etc.) while still allows legitimate emails to pass through. The following data set was compiled from David Diez's Gmail Account, early months of 2012, and consists of 19 predictors and 1 response on 3921 emails.
 
-In this problem, you will simulate data from a *logistic regression* model. 
-
-
-The following code chunk generates 200 predictor values for the simulated model. **Do not change the seed value.**
-
-```{r}
-set.seed(1010)
-x1 <- runif(200, 0,1) #Predictor X1
-x2 <- runif(200, 0,1) #Predictor X2
-sim_data<-data.frame(x1,x2) #Data frame of predictor values
+```{r message = F}
+email <- read_csv("email.csv") %>% mutate(spam = as.factor(spam))
 ```
 
-The goal of this problem is to simulate data from a logistic regression model with parameters $\beta_0 = -5$, $\beta_1 = 6$ and $\beta_2 = 5$. 
+Below is a description of all variables that appear in the data set. 
 
-a. Write the mathematical formula for the conditional probability function $p(X)$ for this model.
+- `spam` Indicator for whether the email was spam. This is the response variable.
 
-b. Write an R function which takes as input the values of the predictors `X1` and `X2` and outputs the conditional probability that $Y$ takes the value $1$, given those values. Plot the values of your probability function for the simulated data.
+- `to_multiple` Indicator for whether the email was addressed to more than one recipient.
 
-c. Use `mutate` to add a column to your `sim_dat` data frame containing the conditional probability of $Y=1$ given the values of $X_1$ and $X_2$. 
+- `from` Whether the message was listed as from anyone (this is usually set by default for regular outgoing email).
 
-d. In this part, generate values of the response $Y$ using your conditional probabilities and add the results to the data frame `sim_data`. Use the following code as template to do so: 
+- `cc` Number of people cc'ed.
 
-```{r}
-example_df<-data.frame(p = c(.2, .4, .6, .8)) #This creates a column of probabilities p
+- `sent_email` Indicator for whether the sender had been sent an email in the last 30 days.
 
-example_df<-example_df %>% 
-  rowwise() %>% #This allows you to mutate entries in the data frame one row at a time
-  mutate(Y = sample(0:1, size = 1, prob = c(1-p, p))) #This creates a sample in each row 
-    #with the given probability of getting Y = 1.
+- `image` The number of images attached.
 
-example_df
-#Run this code chunk several times to convince yourself that in each row, Y has the indicated
-#probability of taking the value 1
-```
+- `attach` The number of attached files.
+
+- `dollar` The number of times a dollar sign or the word “dollar” appeared in the email.
+
+- `winner` Indicates whether “winner” appeared in the email.
+
+- `inherit` The number of times “inherit” (or an extension, such as “inheritance”) appeared in the email.
+
+- `viagra` The number of times “viagra” appeared in the email.
+
+- `password` The number of times “password” appeared in the email.
+
+- `num_char` The number of characters in the email, in thousands.
+
+- `line_breaks` The number of line breaks in the email (does not count text wrapping).
+
+- `format` Indicates whether the email was written using HTML (e.g. may have included bolding or active links).
+
+- `re_subj` Whether the subject started with “Re:”, “RE:”, “re:”, or “rE:”
+
+- `exclaim_subj` Whether there was an exclamation point in the subject.
+
+- `urgent_subj` Whether the word “urgent” was in the email subject.
+
+- `exclaim_mess` The number of exclamation points in the email message.
+
+- `number` Factor variable saying whether there was no number, a small number (under 1 million), or a big number.
 
 
-e. Create a scatterplot of your simulated data, using color to denote the values of $Y$. Estimate a reasonable linear decision boundary (just based on inspection of the graph, no calculation necessary) and add it to the plot using `geom_abline`. 
+a. Choose 4 of the predictors above and create appropriate visualizations showing their individual distribution, as well as their relationship to the response `spam`. What are some trends demonstrated by the plots? Based on your preliminary analysis, which predictor do you think would be most helpful in classifying spam?
 
-f. Fit a logistic regression model for $Y$ as a function of $X_1$ and $X_2$ based on `sim_data`. How do the coefficients of your fitted model compare to the original parameters $\beta_0 = -5$, $\beta_1 = 6$ and $\beta_2 = 5$?
+b. Randomly divide the data into a training and test set using a 75-25 ratio. Be sure to set a seed to ensure reproducibility.
 
-g. Compute the training error rate on your simulated data. How do you think this compares to the theoretical Bayes classifier error rate?
+c. Fit a logistic regression model predicting `spam` as a function of other variables. Create a confusion matrix on test data, compute the test error rate, and create an ROC curve.
 
-h. Use LOOCV to estimate the test error for the logistic regression model. How does this compare to your training error rate?
+d. Based on your findings in part (a), explain why neither a LDA nor a QDA model would be appropriate for this data.
+
+e. Fit a tuned KNN classification model predicting `spam` as a function of other variables. Create a confusion matrix on test data, compute the test error rate, and create an ROC curve.
+
+f. Fit a pruned classification tree predicting `spam` as a function of other variables. Create a confusion matrix on test data, compute the test error rate, and create an ROC curve.
+
+g. Compare the results of the previous steps. Which model had the highest accuracy? Did any models differ significantly in their sensitivity or specificity?
+
+h. In the context of an email spam filter, which type of misclassification error is worse: classifying a legitimate email as spam, or classifying a spam email as legitimate? Explain how you could modify one of the procedures in part (c), (e), or (f) to reduce this type of error.
+
 
 
 *******************************************************
@@ -180,70 +201,51 @@ h. Compute the RMSE of each of your models from parts (c), (e), and (f) on the *
 
 ## Problem 3
 
-Your goal in this problem is to create an email spam filter, which blocks unwanted and unsolicited email (advertisements, scams, chain letters, pornography etc.) while still allows legitimate emails to pass through. The following data set was compiled from David Diez's Gmail Account, early months of 2012, and consists of 19 predictors and 1 response on 3921 emails.
 
-```{r message = F}
-email <- read_csv("email.csv") %>% mutate(spam = as.factor(spam))
+
+In this problem, you will simulate data from a *logistic regression* model. 
+
+
+The following code chunk generates 200 predictor values for the simulated model. **Do not change the seed value.**
+
+```{r}
+set.seed(1010)
+x1 <- runif(200, 0,1) #Predictor X1
+x2 <- runif(200, 0,1) #Predictor X2
+sim_data<-data.frame(x1,x2) #Data frame of predictor values
 ```
 
-Below is a description of all variables that appear in the data set. 
+The goal of this problem is to simulate data from a logistic regression model with parameters $\beta_0 = -5$, $\beta_1 = 6$ and $\beta_2 = 5$. 
 
-- `spam` Indicator for whether the email was spam. This is the response variable.
+a. Write the mathematical formula for the conditional probability function $p(X)$ for this model.
 
-- `to_multiple` Indicator for whether the email was addressed to more than one recipient.
+b. Write an R function which takes as input the values of the predictors `X1` and `X2` and outputs the conditional probability that $Y$ takes the value $1$, given those values. Plot the values of your probability function for the simulated data.
 
-- `from` Whether the message was listed as from anyone (this is usually set by default for regular outgoing email).
+c. Use `mutate` to add a column to your `sim_dat` data frame containing the conditional probability of $Y=1$ given the values of $X_1$ and $X_2$. 
 
-- `cc` Number of people cc'ed.
+d. In this part, generate values of the response $Y$ using your conditional probabilities and add the results to the data frame `sim_data`. Use the following code as template to do so: 
 
-- `sent_email` Indicator for whether the sender had been sent an email in the last 30 days.
+```{r}
+example_df<-data.frame(p = c(.2, .4, .6, .8)) #This creates a column of probabilities p
 
-- `image` The number of images attached.
+example_df<-example_df %>% 
+  rowwise() %>% #This allows you to mutate entries in the data frame one row at a time
+  mutate(Y = sample(0:1, size = 1, prob = c(1-p, p))) #This creates a sample in each row 
+    #with the given probability of getting Y = 1.
 
-- `attach` The number of attached files.
-
-- `dollar` The number of times a dollar sign or the word “dollar” appeared in the email.
-
-- `winner` Indicates whether “winner” appeared in the email.
-
-- `inherit` The number of times “inherit” (or an extension, such as “inheritance”) appeared in the email.
-
-- `viagra` The number of times “viagra” appeared in the email.
-
-- `password` The number of times “password” appeared in the email.
-
-- `num_char` The number of characters in the email, in thousands.
-
-- `line_breaks` The number of line breaks in the email (does not count text wrapping).
-
-- `format` Indicates whether the email was written using HTML (e.g. may have included bolding or active links).
-
-- `re_subj` Whether the subject started with “Re:”, “RE:”, “re:”, or “rE:”
-
-- `exclaim_subj` Whether there was an exclamation point in the subject.
-
-- `urgent_subj` Whether the word “urgent” was in the email subject.
-
-- `exclaim_mess` The number of exclamation points in the email message.
-
-- `number` Factor variable saying whether there was no number, a small number (under 1 million), or a big number.
+example_df
+#Run this code chunk several times to convince yourself that in each row, Y has the indicated
+#probability of taking the value 1
+```
 
 
-a. Choose 4 of the predictors above and create appropriate visualizations showing their individual distribution, as well as their relationship to the response `spam`. What are some trends demonstrated by the plots? Based on your preliminary analysis, which predictor do you think would be most helpful in classifying spam?
+e. Create a scatterplot of your simulated data, using color to denote the values of $Y$. Estimate a reasonable linear decision boundary (just based on inspection of the graph, no calculation necessary) and add it to the plot using `geom_abline`. 
 
-b. Randomly divide the data into a training and test set using a 75-25 ratio. Be sure to set a seed to ensure reproducibility.
+f. Fit a logistic regression model for $Y$ as a function of $X_1$ and $X_2$ based on `sim_data`. How do the coefficients of your fitted model compare to the original parameters $\beta_0 = -5$, $\beta_1 = 6$ and $\beta_2 = 5$?
 
-c. Fit a logistic regression model predicting `spam` as a function of other variables. Create a confusion matrix on test data, compute the test error rate, and create an ROC curve.
+g. Compute the training error rate on your simulated data. How do you think this compares to the theoretical Bayes classifier error rate?
 
-d. Based on your findings in part (a), explain why neither a LDA nor a QDA model would be appropriate for this data.
-
-e. Fit a tuned KNN classification model predicting `spam` as a function of other variables. Create a confusion matrix on test data, compute the test error rate, and create an ROC curve.
-
-f. Fit a pruned classification tree predicting `spam` as a function of other variables. Create a confusion matrix on test data, compute the test error rate, and create an ROC curve.
-
-g. Compare the results of the previous steps. Which model had the highest accuracy? Did any models differ significantly in their sensitivity or specificity?
-
-h. In the context of an email spam filter, which type of misclassification error is worse: classifying a legitimate email as spam, or classifying a spam email as legitimate? Explain how you could modify one of the procedures in part (c), (e), or (f) to reduce this type of error.
+h. Use cross-validation to estimate the test error for the logistic regression model. How does this compare to your training error rate?
 
 
 ***********************************
