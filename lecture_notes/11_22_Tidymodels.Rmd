@@ -1,0 +1,766 @@
+---
+title: "Tidymodels"
+author: "Nate Wells"
+date: "November 22nd, 2021"
+institute: "Math 243: Stat Learning"
+fontsize: 9pt
+output: 
+  beamer_presentation:
+    includes:
+      in_header: preamble.tex    
+graphics: yes    
+    
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = FALSE,
+	fig.align = "center",
+	message = FALSE,
+	cache = F,
+	fig.width = 6,
+	fig.height = 4,
+	warning = FALSE,
+	out.width = "70%"
+)
+library(tidyverse)
+library(knitr)
+library(ggrepel)
+library(tidymodels)
+```
+
+## Outline
+
+In today's class, we will...
+
+- Discuss the `tidymodels` packages for model building in the `tidyverse` framework 
+
+
+
+
+# Intro to tidymodels 
+
+## Why `tidymodels`?
+
+- Suppose we plan to classify data with a binary response variable and want predicted probabilities.
+
+  \pause
+  
+  - Several different models are available:
+
+
+| Function     | Package                             | Code                                          |
+| :----------- | :---------------------------------- | :-------------------------------------------- |
+| `lda`        | <span class="pkg">MASS</span>       | `predict(object)`                             |
+| `glm`        | <span class="pkg">stats</span>      | `predict(object, type = "response")`          |
+| `gbm`        | <span class="pkg">gbm</span>        | `predict(object, type = "response", n.trees)` |
+| `rpart`       | <span class="pkg">rpart</span>     | `predict(object, type = "prob")`              |
+| `kknn`        | <span class="pkg">kknn</span>      | `kknn(...)$prob`                              |
+
+\pause
+
+- Each method has significantly different methods for making class probability predictions
+
+\pause
+
+- Additionally, each model takes in different types of data arguments (vectors, model matrices, data frames, model formulas)
+
+## `tidymodels` goals
+
+Broadly, `tidymodels` presents collection of modeling packages that share design philosophy, syntax and data structure to make it easy to move between packages.
+
+\pause
+
+Additionally, `tidymodels` fits in the broader `tidyverse` framework:
+
+- Packages and functions should be accessible and easily interpreted 
+  
+- Outputs should be data frames (or tibbles) whenever possible
+  
+- Functions should be compatible with the `%>%` operator and functional programming
+  
+- Model objects should be compatible with `ggplot2`
+  
+\pause
+
+`tidymodels` takes the mechanics from each individual model package (`mass`, `tree`, `glm` etc.) and unifies the input and output 
+
+
+## The `tidymodel` framework
+
+
+1. Preprocess data using the `recipes` package
+
+2. Create training-test data splits using the `rsample` package
+
+3. Give a model a functional form and specify fitting method using the `parsnip` package 
+
+4. Fit the model, tidy the results, and make predictions using the `fit`, `tidy`, and `predict` functions
+
+5. Estimate model performance using cross-validation from the `rsample` package
+
+6. Tune model parameters by adding model specifications
+
+\pause
+
+We'll investigate each of these in-depth (although slightly out of order)
+
+# Build a Model
+
+## The Data
+
+The `sea_urchins` data set explores the relationship between feeding regimes and size of sea urchins over time:
+\footnotesize
+```{r echo  = T}
+sea_urchins<-read_csv("https://tidymodels.org/start/models/urchins.csv") %>% 
+  setNames(c("food_regime", "initial_volume", "width")) %>%
+  mutate(food_regime = factor(food_regime, levels = c("Initial", "Low", "High")))
+head(sea_urchins)
+```
+
+## Scatterplot
+
+```{r}
+ggplot(sea_urchins,
+       aes(x = initial_volume, 
+           y = width, 
+           group = food_regime, 
+           col = food_regime)) + 
+  geom_point() + 
+  geom_smooth(method = lm, se = FALSE)+theme_bw()
+```
+
+\pause
+
+\small
+
+- Goal: Predict `width` as a function of `food_regime` and `initial_volume`. 
+
+  \pause
+
+  - Does an additive model seem appropriate?
+  
+  \pause
+  
+  - One option might be a linear model with interaction terms.
+  
+## Build it!
+
+Our model formula takes the form:
+
+\footnotesize
+
+```{r echo=T, eval = F}
+width ~ initial_volume + food_regime + initial_volume:food_regime
+```
+
+\normalsize
+
+\pause
+
+- We need to specify the model's functional form using the `parsnip` package. 
+
+- Then specify the method for fitting using `set_engine()`
+
+\pause
+
+\footnotesize
+```{r echo=T}
+library(parsnip)
+linear_reg() %>% 
+  set_engine("lm")
+```
+
+\normalsize
+
+  \pause
+  
+  - Other engines are possible for `linear_reg()`: `glmnet`, `stan`, and more
+  
+\pause
+
+
+
+Now we create the model based on data using the `fit` function:
+
+\footnotesize
+
+```{r echo=T}
+lm_mod<-linear_reg() %>% 
+  set_engine("lm")
+
+lm_fit<- lm_mod %>% 
+  fit(width ~ initial_volume*food_regime, data = sea_urchins)
+```
+
+## Results
+
+The output of our `lm_fit` object:
+\footnotesize
+```{r echo = T}
+lm_fit  
+```
+
+## Summary Table
+
+To get the traditional `summary` table:
+
+\footnotesize
+
+```{r echo = T}
+tidy(lm_fit) %>% kable()
+```
+
+\pause
+
+\normalsize
+
+Note that the output is a data frame with standard column names
+
+## New Data
+
+Suppose we wish to predict the `width` of 6 sea urchins with `initial_volume` 5 and 30 ml, and with each different `food_regime`.
+
+\pause
+
+- First, we generate data:
+
+\pause
+
+\footnotesize
+
+```{r echo =T}
+new_urchins <- expand.grid(initial_volume  = c(5,30),
+                        food_regime = c("Initial", "Low", "High"))
+new_urchins %>% kable()
+```
+
+## Make predictions
+
+Then we make predictions
+
+\footnotesize
+
+```{r echo = T}
+new_preds <- predict(lm_fit, new_data = new_urchins)
+conf_int_preds<-predict(lm_fit, new_data = new_urchins, type = "conf_int")
+new_preds %>% kable()
+conf_int_preds %>% kable()
+```
+
+
+## Combining Data and Predictions
+
+Because the result of `predict()` is tidy, we can easily combine it with the original data:
+
+\footnotesize
+
+```{r echo = T}
+combined_data <- new_urchins %>% cbind(new_preds) %>% cbind(conf_int_preds)
+combined_data %>% kable()
+```
+
+## Predictions Plot
+
+\footnotesize
+
+```{r echo=T, fig.height=3.5}
+ggplot(combined_data, aes(x = food_regime)) + 
+  geom_point(aes(y = .pred)) + 
+  geom_errorbar(aes(ymin = .pred_lower, ymax = .pred_upper),width = .2) + 
+  labs(y = "urchin size")+theme_bw()
+```
+
+
+## Using a different engine
+
+**LASSO?**
+
+- With only 3 predictors (`food_regime`, `initial_width` and the interaction term), its unlikely our model will be improved by Penalized Regression. But let's try anyway:
+
+\footnotesize
+
+```{r echo = T}
+glmnet_mod<- linear_reg(penalty = 0.01, mixture = 1) %>% set_engine("glmnet")
+```
+
+\small
+
+- `mixture = 1` indicates LASSO (`mixture = 0` is used for Ridge Regression)
+
+- `glmnet` requires us to indicate a value of `penalty` parameter $\lambda$ to make predictions. 
+
+  - Here, we choose `penalty = 0.01` somewhat arbitrarily (we'll tune later); in any case, `glmnet` will still create models for all $\lambda$
+
+\footnotesize
+
+\pause
+
+```{r echo = T}
+glmnet_fit <- glmnet_mod %>% fit(width ~ initial_volume*food_regime, data = sea_urchins)
+tidy(glmnet_fit, penalty = .004) #penalty selects particular value of lambda
+```
+
+## Results from `glmnet`
+
+\footnotesize
+
+```{r echo = T}
+new_glmnet_preds <- predict(glmnet_fit, new_data = new_urchins, penalty = 0.004)
+combined_glmnet_data <- new_urchins %>% cbind(new_glmnet_preds)
+two_models <- rbind(combined_glmnet_data, 
+                    combined_data %>% select(-.pred_lower, -.pred_upper )) %>% 
+  mutate(model = rep(c("glmnet","lm"), each = 6))
+```
+
+```{r echo = T, fig.height=3}
+ggplot(two_models, aes(x = food_regime)) + 
+  geom_point(aes(y = .pred, color = model) ) + 
+  labs(y = "urchin size")+theme_bw() 
+```
+
+# Preprocessing with recipes
+
+## Recipes
+
+- The `recipes` package assists with preprocessing before a model is trained
+
+  \pause
+
+  - Converts qualitative predictors to dummy variables
+  
+  - Transforms data to be on a different scale
+  
+  - Transforms several predictors at the same time
+  
+  - Extracts features from variable
+  
+\pause
+
+- The main advance of `recipes` is that it allows us combine several steps at once, in a reproducible fashion
+ 
+
+## House Prices
+
+- The `house` data contains information on 30 predictors for 200 houses in Ames, Iowa
+
+```{r}
+house<-read.csv("data/house.csv") %>% relocate(SalePrice, Id)
+```
+
+\footnotesize
+
+```{r echo = T}
+names(house)
+```
+
+\pause
+\normalsize
+
+- Note that the variable `Id` is not useful as a predictor, but is useful for referring to houses in the data set. 
+
+## Investigate Predictors
+
+- Additionally, note that several of the variables are factors, so should be converted to a collection of dummy variables.
+
+\pause
+
+- Moreover, for a few variables, some levels are very underrepresented.
+
+\footnotesize
+```{r echo = T}
+house %>% count(RoofMatl) 
+```
+
+
+## Data Splitting
+
+- We can use the `rsample` package to create a test-training split
+
+  \pause
+  
+  - The `rsample` package allows us to create stratified samples in addition to simple random samples
+  
+\pause
+
+\footnotesize
+
+```{r echo = T, cache = T}
+library(rsample)
+set.seed(1221)
+data_split <- initial_split(house , prop = 3/4)
+train_data <- training(data_split)
+test_data <- testing(data_split)
+```
+
+
+## Create a recipe and update roles
+
+- We now create a recipe for some data pre-processing
+
+\footnotesize
+
+```{r echo = T}
+library(recipes)
+house_rec <- 
+  recipe(SalePrice ~ ., data = train_data) %>% 
+  update_role(Id, new_role = "ID")
+```
+
+\pause
+
+\footnotesize
+
+```{r echo=T}
+summary(house_rec)  
+```
+
+## Add steps to recipes
+
+- Consider the relationship between of sale price and lot area:
+
+```{r fig.height=3, out.width = "50%"}
+ggplot(house, aes(x = LotArea, y = SalePrice))+geom_point()+theme_bw()
+```
+
+
+
+\pause
+
+- Accuracy of a linear model may improve by performing log transformation on LotArea:
+
+```{r fig.height=3,out.width = "50%"}
+ggplot(house, aes(x =  log10(LotArea), y =  SalePrice))+geom_point() +theme_bw() 
+```
+
+## Adding steps to recipes
+
+- Let's update our recipe:
+
+ 
+\footnotesize 
+
+```{r echo =T}
+house_rec <- house_rec %>% 
+  step_log(LotArea, base = 10)
+
+house_rec
+```
+
+## Create New Variables from Old
+
+- The original data set contains variables `FullBath` and `HalfBath`. But we want a measure of total number of baths:
+$$
+\textrm{TotalBath} = \textrm{FullBath}+\frac{1}{2}\textrm{HalfBath}
+$$
+ \pause
+ 
+- We can also add a mutate step in our recipe to do just this:
+
+\footnotesize
+
+```{r echo =T}
+house_rec <- house_rec %>% 
+  step_mutate(TotalBath = FullBath+0.5*HalfBath) %>% 
+  step_rm(FullBath, HalfBath)
+
+house_rec
+```
+ 
+ 
+## Create Dummy Variables
+
+- Recall that 7 of our variables are factors (`Functional`, `BldgType`, `Foundation`, `LotShape`, `LandSlope`, `SaleCondition`, `RoofMatl`). To create appropriate dummy variables:
+
+\footnotesize
+
+```{r echo = T}
+house_rec <- house_rec %>% step_dummy(all_nominal(), -all_outcomes())
+house_rec
+```
+
+  \pause
+
+\small
+
+  - The first argument `all_nominal` selects all variables that are either factors or characters
+
+  - The second argument `-all_outcomes` removes any response variables from this step
+
+\pause
+
+## Remove Problematic Predictors
+
+- Finally, to avoid the situation where an infrequently occuring level doesn't exist in the training or test sets:
+
+\footnotesize
+
+```{r echo = T}
+house_rec <- house_rec %>% step_zv(all_predictors())
+house_rec
+```
+
+  \pause
+
+\normalsize
+
+  - The `step_zv` verb removes columns from the training data which have a single value
+
+## Workflows
+
+- Why create a recipe when we could just as easily perform the pre-processing steps using `dplyr`?
+
+\pause
+
+1. The recipe allows us to apply the same procedures to both test and training data.
+
+2. The recipe gives instructions for processing the data **without actually performing that action**
+
+\pause
+
+To use our recipe across several steps, we will use a *workflow*, which will
+
+1. Process the recipe using the training set
+
+2. Apply the recipe to the training set
+
+3. Apply the recipe to the test set
+
+## Create the workflow
+
+\footnotesize
+
+```{r echo = T}
+house_mod <- linear_reg() %>% set_engine("lm")
+  
+house_wflow <- workflow() %>% 
+  add_model(house_mod) %>% 
+  add_recipe(house_rec)
+
+house_wflow
+```
+
+## Fitting Models with Workflows
+
+\footnotesize
+
+```{r echo = T}
+house_fit <- house_wflow %>% fit(data = train_data)
+
+house_fit %>% pull_workflow_fit() %>% tidy()
+```
+
+## Making predictions with workflow
+
+\footnotesize
+
+```{r echo=T}
+house_preds<- predict(house_fit, test_data)
+house_preds
+```
+
+## Evaluate performance
+
+\footnotesize
+
+```{r echo = T}
+house_results <- house_preds %>% cbind(test_data)
+```
+
+```{r fig.height = 3, out.width = "60%"}
+ggplot(house_results, aes(x = .pred, y = SalePrice))+geom_point()+theme_bw()
+```
+
+```{r echo = T }
+rbind(
+  rmse(house_results, truth = SalePrice, estimate = .pred),
+  rsq(house_results, truth = SalePrice, estimate = .pred)
+)
+```
+
+# Resampling
+
+## Resampling with `rsample`
+
+- We previously built a linear model for `SalePrice` as a function of predictors in the `house` data and found the following accuracy measures on **test** data:
+
+\small
+
+```{r }
+rbind(
+ rmse(house_results, truth = SalePrice, estimate = .pred),
+  rsq(house_results, truth = SalePrice, estimate = .pred)
+)
+```
+
+\pause
+
+- But how typical are these estimates? Let's perform cross-validation.
+
+\footnotesize
+
+```{r echo = T}
+set.seed(271)
+library(rsample)
+folds <- vfold_cv(train_data, v = 10, statra = RoofMatl)
+```
+
+## Delving Deeper
+
+- Which observations are in each fold?
+
+\footnotesize
+```{r echo=T}
+folds$splits[[1]]
+folds$splits[[1]] %>% analysis() %>% head() %>% select(1:5)
+folds$splits[[1]] %>% assessment() %>% head() %>% select(1:5)
+```
+
+## Adding resampling to workflow
+
+\footnotesize
+
+```{r echo=T}
+house_fit_resamples <- house_wflow %>% fit_resamples(folds)
+house_fit_resamples
+```
+
+## Metrics
+
+- Let's look at the results:
+
+\footnotesize
+
+```{r echo=T}
+house_fit_resamples$.metrics[[1]]
+house_fit_resamples$.metrics[[2]]
+house_fit_resamples$.metrics[[3]]
+```
+
+## CV Performance
+
+- How do the models do overall?
+
+\footnotesize
+
+```{r echo = T}
+#Baseline
+rbind(
+  rmse(house_results, truth = SalePrice, estimate = .pred),
+  rsq(house_results, truth = SalePrice, estimate = .pred)
+)
+```
+
+\pause
+
+\normalsize
+
+
+- Cross-validation:
+
+\footnotesize
+
+```{r echo = T}
+collect_metrics(house_fit_resamples)
+```
+
+# Tuning Hyperparameters
+
+## Building a LASSO model
+
+- The linear model did fine. But can we improve our results using penalized regression? 
+
+  \pause
+  
+  - Note that our data pre-processing recipe `house_rec` is still valid (although we could change it)
+
+\pause
+
+- If we wanted a LASSO model with particular penalty (say $\lambda = 4$) we could use
+\footnotesize
+```{r echo=T}
+house_lasso_mod <- linear_reg(penalty =4 ) %>% set_engine("glmnet")
+```
+
+\pause
+
+\normalsize
+
+- But we are really interested in finding the **BEST** value of $\lambda$. So instead
+\footnotesize
+```{r echo=T}
+house_lasso_mod <- linear_reg(penalty = tune() ) %>% set_engine("glmnet")
+```
+
+\pause
+
+\normalsize
+
+- Let's fit the model and tune
+
+\footnotesize
+```{r echo = T}
+lasso_grid <- grid_regular(penalty() %>% range_set(c(-5,5)), levels = 10)
+lasso_wf <- workflow() %>% add_model(house_lasso_mod) %>% add_recipe(house_rec)
+lasso_res <- lasso_wf %>% tune_grid(grid = lasso_grid, resamples = folds)
+```
+
+## Results
+
+\footnotesize
+```{r echo=T}
+collect_metrics(lasso_res)
+```
+
+\pause
+
+## Which penalties?
+
+- Focus just on optimal penalties for rmse:
+
+\footnotesize
+
+```{r echo = T}
+lasso_res %>%
+  show_best("rmse")
+```
+
+\pause
+
+\normalsize
+
+- Let's collect the best model:
+
+\small
+
+```{r echo=T}
+best_lasso <- lasso_res %>% select_best(metric = "rmse")
+best_lasso
+```
+
+## Finalize the model
+
+- We update or finalize our workflow with the values from `select_best`:
+
+\footnotesize
+```{r echo = T}
+final_lasso_wf <- lasso_wf %>% finalize_workflow(best_lasso)
+final_lasso_wf
+```
+
+## Fit the Best Model
+
+- Thus far, we've just focused on finding the best parameter. But we haven't actually built a LASSO model on training data. Let's do that:
+
+\pause
+
+\footnotesize
+
+```{r echo=T}
+final_lasso_fit<-final_lasso_wf %>% last_fit(data_split )
+
+final_lasso_fit$.metrics
+final_lasso_fit$.predictions
+```
+
