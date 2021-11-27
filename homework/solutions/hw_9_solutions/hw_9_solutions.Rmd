@@ -1,0 +1,382 @@
+---
+title: "Homework 9 Solutions"
+author: ""
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+# Instructions
+
+**Due: 5pm on Wednesday, December 1st**
+
+1. Add your name between the quotation marks on the author line in the YAML above.
+
+2. Compose your answer to each problem between the bars of red stars.
+
+3. Commit your changes frequently.
+
+4. Be sure to knit your .Rmd to a .pdf file.
+
+5. Push both the .pdf and the .Rmd file to your repo on the class organization before the deadline.
+
+# Theory
+
+## Problem 1
+
+*Based on ISLR Exercise 8.2*
+It is mentioned in Section 8.2.3 of ISLR that boosting using depth-one trees (or *stumps*) leads to an *additive* model: that is, a model of the form
+
+$$
+f(X) = \sum_{j = 1}^p f_j(X_i)
+$$
+Verify that this is the case. Hint: Start with equation 8.12 in Algorithm 8.2.
+
+***************************************************
+
+The output of the boosted model is
+$$
+\hat{f}(x) = \sum_{b = 1}^B \lambda \hat{f}^b(x)
+$$
+where $\lambda \hat{f}^b$ is the prediction obtained from the $b$th step of the process. But since we assume that each iteration uses trees of depth 1, then each iterative $\hat{f}^b$ is of the form
+$$
+\hat{f}^b(x) = \hat{\beta}_0^b + \hat{\beta}_1^b I( x_j < c_b)
+$$
+for real numbers $\hat{\beta}_0^b, \hat{\beta}_1^b, c_b$ and predictor $x_j$; that is, for an observation $x$, $\hat{f}^b$ predicts the value $\hat{\beta}_0^b$ if $x_j \geq c_b$ and predicts the value $\hat{\beta}_0^b + \hat{\beta}_1^b$ if $x_j < c_b$.
+
+Let $\hat{f}_1$ be the sum of all $\hat{f}^b$ that use $x_1$ to split, let $\hat{f}_2$ be the sum of all $\hat{f}^b$ that use $x_2$ to split, and so on. Note that each $\hat{f}_j$ is a function of a single predictor $x_j$. Then
+$$
+\hat{f}(x) = \sum_{b = 1}^B \lambda \hat{f}^b(x) = \sum_{j = 1}^p \lambda \hat{f}_j(x_j)
+$$
+as desired.
+
+
+***************************************************
+
+## Problem 2
+
+*Based on ISLR Exercise 8.5*
+
+Suppose we produce ten bootstrapped samples from a data set containing red and green classes. We then apply a classification tree to each bootstrapped sample and, for a specific value of X produce 10 estimates of P(Class is red | X):
+
+0.1, 0.14, 0.2, 0.2, 0.55, 0.6, 0.6, 0.65, 0.7, 0.75
+
+There are two common ways to combine these results together into a single class prediction. One is the majority vote approach discussed in Chapter 8 of ISLR. The second approach is the classify based on the average probability. In this example, what is the final classification under each of these two approaches?
+
+*************************************************
+
+If we classify based on the majority vote approach using the rule: Class is red if $P( \textrm{Class is red } | X) > 0.5$, then our classifications for each boostrap sample are $G,G,G,G,R, R, R, R, R$ and the majority class is **red**. 
+
+On the other hand, the average probability is 0.449, which gives a classification of **green**.
+
+```{r}
+mean( c( 0.1, 0.14, 0.2, 0.2, 0.55, 0.6, 0.6, 0.65, 0.7, 0.75))
+```
+
+
+*************************************************
+
+
+# Applied
+
+
+
+
+## Problem 3
+
+One of the most useful applications to come out of classification models has been character (i.e. letter) recognition. In the following problem, you will build your own character recognition system using boosted trees.
+
+### The data
+
+Our data set consists of a catalog of the features extracted from 20,000 images of letters. They can be loaded in with the following code.
+
+```{r}
+lettersdf <- read.csv("data/lettersdf.csv", header = T)
+```
+
+(Data comes from: P. W. Frey and D. J. Slate. “Letter Recognition Using Holland-style Adaptive Classifiers”. (Machine Learning Vol 6 \#2 March 91) )
+
+
+Initially, the each image was made up of 45 x 45 pixels, where each was characterized as either “on” or “off” (black or white). In order to extract more meaningful predictors from the data, researchers went through and performed *feature extraction*, collapsing those 2025 dimensions into 16, each of which is a summary statistic calculated on the image. They are as follows:
+
+1. (The actual letter that the image corresponds to.) 
+2. The horizontal position, counting pixels from the left edge of the image, of the center of the smallest rectangular box that can be drawn with all “on” pixels inside the box. 
+3. The vertical position, counting pixels from the bottom, of the above box. 
+4. The width, in pixels, of the box. 
+5. The height, in pixels, of the box. 
+6. The total number of “on” pixels in the character image. 
+7. The mean horizontal position of all “on” pixels relative to the center of the box and divided by the width of the box. This feature has a negative value if the image is “left- heavy” as would be the case for the letter L. 
+8. The mean vertical position of all “on” pixels relative to the center of the box and divided by the height of the box. 
+9. The mean squared value of the horizontal pixel distances as measured in 6 above. This attribute will have a higher value for images whose pixels are more widely separated in the horizontal direction as would be the case for the letters W or M. 
+10. The mean squared value of the vertical pixel distances as measured in 7 above. 
+11. The mean product of the horizontal and vertical distances for each “on” pixel as measured in 6 and 7 above. This attribute has a positive value for diagonal lines that run from bottom left to top right and a negative value for diagonal lines from top left to bottom right. 
+12. The mean value of the squared horizontal distance times the vertical distance for each “on” pixel. This measures the correlation of the horizontal variance with the vertical position. 
+13. The mean value of the squared vertical distance times the horizontal distance for each “on” pixel. This measures the correlation of the vertical variance with the horizontal position. 
+14. The mean number of edges (an “on” pixel immediately to the right of either an “off” pixel or the image boundary) encountered when making systematic scans from left to right at all vertical positions within the box. This measure distinguishes between letters like “W” or “M” and letters like ‘T’ or “L.” 
+15. The sum of the vertical positions of edges encountered as measured in 13 above. This feature will give a higher value if there are more edges at the top of the box, as in the letter “Y.” 
+16. The mean number of edges (an “on” pixel immediately above either an “off” pixel or the image boundary) encountered when making systematic scans of the image from bottom to top over all horizontal positions within the box. 
+17. The sum of horizontal positions of edges encountered as measured in 15 above.
+
+
+You will want to build your model on a training data set and evaluate its performance on a separate test data set. Use the following code to generate training-test split:
+
+```{r} 
+#Note: we can't use our typical rsample
+#method since some observations are duplicates
+
+set.seed(1) 
+train_index <- sample(1:nrow(lettersdf), nrow(lettersdf) * .75)
+test_index <- (1:nrow(lettersdf))[-(train_index)] 
+
+letters_trn<-lettersdf %>% slice(train_index)
+letters_tst<-lettersdf %>% slice(test_index)
+```
+
+a. Construct a boosted tree to predict the class of the training images (the letters) based on its 16 features. This can be done with the `gbm()` function in the library of the same name. Look to the end of chapter 8 for an example of the implementation. Note that we'll be performing a boosted *classification* tree. It's very similar to the boosted regression tree except the method of calculating a residual is adapted to the classification setting. Use as your model parameters $B = 50$, $\lambda = 0.1$, and $d = 1$. Note that this is computationally intensive, so it may take a minute to run. (Note: you may want to add `cache = T` to the chunk options of the code chunk you used to create the model, so that R doesn't need to run the code and build your model each time you knit your document).
+
+b. Which variable was most important to your boosted tree? 
+
+c. Now use this boosted model to predict the classes of the images in the test data set. Use the same number of trees and be sure to add the argument `type = "response"`. The output of this will be a 5000 X 26 X 1 array: for each image you will have a predicted probability that it is from each of the 26 classes. To extract the vector of length 5000 of each final predicted class, you can use the following function:
+
+```{r}
+##apply the following function to the output of predict()
+
+my_predictions <- function(x){ LETTERS[apply(x, 1, which.max)]}
+```
+
+d. Create a 26 x 26 confusion matrix for the predicted and actual letters. What is the misclassification rate? What letter was most difficult to predict? Are there any letter pairs that are particularly difficult to distinguish?
+
+e. Build a second boosted tree model that uses even *slower* learners, that is, decrease $\lambda$ and increase $B$ somewhat to compensate (the slower the learner, the more of them we need). Pick the parameters of your choosing for this, but be wary of trying to fit a model with too high a $B$. You don't want to wait an hour for your model to fit.
+
+f. How does the misclassification rate compare to the rate from you original model? 
+
+g. Are there any letter pairs that became particularly easier/more difficult to distinguish?
+
+***************************************************
+
+a. Note that running `distribution = "multinomial"` will output a warning message. We ignore it for this assignment.
+
+
+```{r}
+set.seed(1)
+library(gbm)
+
+boost_letters <-gbm(V1~., letters_trn, distribution = "multinomial", n.trees = 50, shrinkage = 0.1, interaction.depth = 1) 
+```
+
+b. The most important variable was V13 (The mean value of the squared vertical distance times the horizontal distance for each “on” pixel. This measures the correlation of the vertical variance with the horizontal position). The second most important variable was V12 (The mean value of the squared horizontal distance times the vertical distance for each “on” pixel. This measures the correlation of the horizontal variance with the vertical position. )
+
+```{r}
+summary(boost_letters)
+```
+
+c. 
+
+```{r}
+preds_matrix<-predict(boost_letters, letters_tst, type = "response")
+my_preds<-my_predictions(preds_matrix)
+```
+d. The overall misclassification rate was 0.314. In particular, the letters E, H and K were the most difficult to predict, with misclassification rate of $52.6\%$, $51.9\%$, and $51.5\%$.
+
+
+Inspecting the confusion matrix, it looks like the letters most frequently confused for others were:
+
+  - E (mistaken for X 24 times)
+
+  - K (mistaken for R 23 times)
+  
+  - B (mistaken for D 22 times)
+
+However, it may be preferable to look at the conditional confusion matrix (i.e. for each letter, the proportion of times it was mislabled as another particular letter) since letters appear in the original data set with different frequencies. In this case, it turns out that the same story above holds, as the conditionally most frequently confused letters were:
+
+  - E (mistaken for X 14% of the time)
+  
+  - K (mistaken for R 12% of the time)  
+  
+  - B (mistaken for D 12% of the time)
+
+Finally, we should consider the combined rate two letters were mistaken for each other. For example, while E was mistaken for X 14% of the time, X was mistaken for E only 2% of the time. To do so, we compute the average conditional rate of mistakes for each letter pair:
+
+  - B and D were mixed up at average rate 0.09
+  
+  - X and E were mixed up at average rate 0.08 
+  
+  - E and C were mixed up at average rate 0.08
+
+
+**It's fine if students only consider the first or second point when discussing letter pairs that were particularly difficult to distinguish**
+
+
+\small 
+```{r}
+#Confusion Matrix
+letters_conf <- table(my_preds, letters_tst$V1)
+ letters_conf
+```
+
+ 
+
+```{r}
+#Overall Misclassification rate
+letters_error <- (sum(letters_conf) - sum(diag(letters_conf)))/sum(letters_conf)
+letters_error
+```
+
+```{r}
+## Misclassification by letter
+misclass<-c()
+for (i in 1:26){
+  n <- sum(letters_conf[,i])
+  misclass[i]<-(n - letters_conf[i,i])/n
+}
+
+data.frame(LETTERS, misclass) %>% arrange(desc(misclass))
+```
+
+
+
+```{r}
+#mixup rate
+letters_conf_prop<-letters_conf %>% as.data.frame.matrix() %>%  mutate_all( funs(./sum(.))) %>% as.matrix() 
+
+diag(letters_conf_prop)<-rep(0, times = 26)
+ 
+letters_conf_prop %>% round(digits = 2)
+
+#highest
+which(letters_conf_prop == max(letters_conf_prop), arr.ind=TRUE)
+max(letters_conf_prop)
+
+#second highest
+which(letters_conf_prop == max( letters_conf_prop[letters_conf_prop!=max(letters_conf_prop)] ), arr.ind=TRUE)
+max( letters_conf_prop[letters_conf_prop!=max(letters_conf_prop)] )
+```
+
+```{r}
+mixup_mat <- ( letters_conf_prop + t(letters_conf_prop) )/2
+mixup_mat %>% round(digits = 2)
+
+#highest rate
+which(mixup_mat == max(mixup_mat), arr.ind=TRUE)
+max(mixup_mat)
+
+#second highest rate
+which(mixup_mat == max( mixup_mat[mixup_mat!=max(mixup_mat)] ), arr.ind=TRUE)
+max( mixup_mat[mixup_mat!=max(mixup_mat)] )
+```
+e. We reduce our learning rate by a factor of 2 to 0.05 and increase our number of trees by a factor of 4 to 200. 
+
+```{r}
+boost_letters_slow <-gbm(V1~., letters_trn, 
+                         distribution = "multinomial", 
+                         n.trees = 200, 
+                         shrinkage = 0.05, 
+                         interaction.depth = 1) 
+```
+
+f. In changing the learning rate, we reduced our overall misclassification rate from 0.314 to 0.252. 
+
+
+g. Moreover, the 3 most misclassified letters were S, K, and H, with misclassification rates of $41.8\%$, $38.7\%$, and $38.2\%$. The formerly most misclassified letter (E) had misclassification rate reduced from $52.6\%$ to $36.0\%$.
+
+Looking at the conditional confusion matrix, we see that
+
+  - H was mistaken for R 9% of the time
+  
+  - E was mistaken for X 9% of the time
+  
+  - X was mistaken for O 9% of the time (this was new!)
+  
+The letters that were most frequently mixed up were:
+
+  - E and C were mixed up at average rate of 0.06
+  
+  - Z and S were mixed up at average rate of 0.06
+
+```{r}
+preds_matrix_slow<-predict(boost_letters_slow, letters_tst, type = "response")
+my_preds_slow<-my_predictions(preds_matrix_slow)
+```
+\small 
+```{r}
+#Confusion Matrix
+letters_conf_slow <- table(my_preds_slow, letters_tst$V1)
+ letters_conf_slow
+```
+
+ 
+
+```{r}
+#Overall Misclassification rate
+letters_error_slow <- (sum(letters_conf_slow) - sum(diag(letters_conf_slow)))/sum(letters_conf_slow)
+letters_error_slow
+```
+
+```{r}
+## Misclassification by letter
+misclass_slow<-c()
+for (i in 1:26){
+  n <- sum(letters_conf_slow[,i])
+  misclass_slow[i]<-(n - letters_conf_slow[i,i])/n
+}
+
+data.frame(LETTERS, misclass_slow) %>% arrange(desc(misclass_slow))
+```
+
+```{r}
+#mixup rate
+letters_conf_prop_slow<-letters_conf_slow %>% as.data.frame.matrix() %>%  
+  mutate_all( funs(./sum(.))) %>% as.matrix() 
+
+diag(letters_conf_prop_slow)<-rep(0, times = 26)
+ 
+letters_conf_prop_slow %>% round(digits = 2)
+
+which(letters_conf_prop_slow == max(letters_conf_prop_slow), arr.ind=TRUE)
+max(letters_conf_prop_slow)
+```
+
+```{r}
+mixup_mat_slow <- ( letters_conf_prop_slow + t(letters_conf_prop_slow) )/2
+mixup_mat_slow %>% round(digits = 2)
+
+#highest rate
+which(mixup_mat_slow == max(mixup_mat_slow)[], arr.ind=TRUE)
+max(mixup_mat_slow)
+
+#second highest rate
+which(mixup_mat_slow == max( mixup_mat_slow[mixup_mat_slow!=max(mixup_mat_slow)] ), arr.ind=TRUE)
+max( mixup_mat_slow[mixup_mat_slow!=max(mixup_mat_slow)] )
+```
+
+***************************************************
+
+
+## Problem 4
+
+Return to the `College` data set from HW 8, which can be loaded with the following code:
+
+```{r}
+library(ISLR2)
+data("College")
+```
+
+
+a. Split the data into a test and training set.
+
+b. Fit a `randomForest()` model that performs only bagging and no actual random forests (recall that bagging is the special case of random forests with $m = p$). Next, fit a second random forest model that uses $m = p/3$. Compute their test rMSEs. 
+
+c. Construct a model based on a boosted tree with parameters of your choosing, and compute the rMSE.
+
+d. Compare the rMSE of the bagged tree, the Random Forest, and the boosted tree to the rMSE you for the pruned regression tree, as well at the linear regression model, from HW 8. Which model was most accurate?
+
+e. One thing we lose by using these computational techniques to limit the variance is the clearly interpretable tree diagram. We can still salvage some interpretability by considering `importance()`. Construct a Variable Importance Plot (`varImpPlot()`) for the bagged and random forest models, as well as the boosted tree. So as not to create an overwhelming plot, tweak the arguments to only plot the top ten variables for each. How do these results compare to the list of predictors you hypothesized would be important in HW 8?
+
+***************************************************
+
+
+
+***************************************************
