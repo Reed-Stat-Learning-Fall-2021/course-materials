@@ -1,0 +1,440 @@
+---
+title: "Stacks"
+author: "Nate Wells"
+date: "November 29th, 2021"
+institute: "Math 243: Stat Learning"
+fontsize: 9pt
+output: 
+  beamer_presentation:
+    includes:
+      in_header: preamble.tex    
+graphics: yes    
+    
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = FALSE,
+	fig.align = "center",
+	message = FALSE,
+	cache = F,
+	fig.width = 6,
+	fig.height = 4,
+	warning = FALSE,
+	out.width = "70%"
+)
+library(tidyverse)
+library(knitr)
+library(ggrepel)
+library(tidymodels)
+library(stacks)
+```
+
+## Outline
+
+In today's class, we will...
+
+- Discuss `stacks` package for implementing ensemble learning with `tidymodels`
+
+
+
+
+# Intro to `stacks`
+
+## What is `stacks`?
+
+`stacks` is an R package for ensemble learning compatible with the `tidymodels` framework, developed by Simon Couch '21 and Max Kuhn. 
+
+```{r out.width="1.5in"}
+include_graphics("img/stackslogo.png")
+```
+
+## General Procedure
+
+1. Define candidate models using the `tidymodels` framework (`rsample`, `parsnip`, `workflow`, `recipe`, `tune`)
+
+2. Initialize a `data_stack` object with `stacks()`
+
+3. Iteratively add candidate ensemble members to the `data_stack` using `add_candidates()`
+
+4. Evaluate how to combine their predictions with `blend_predictions()`
+
+5. Fit candidate ensemble members with non-zero stacking coefficients with `fit_members()`
+
+6. Predict on new data using `predict()`
+
+## Our House
+
+The `house` data contains information on 30 predictors for 200 houses in Ames, Iowa
+
+\footnotesize
+
+```{r}
+house<-read.csv("data/house.csv") %>% relocate(SalePrice, Id)
+```
+
+\small
+
+- We perform data preprocessing using a `recipe`
+
+\footnotesize
+
+```{r echo = T}
+set.seed(1221)
+data_split <- initial_split(house , prop = 3/4)
+train_data <- training(data_split)
+test_data <- testing(data_split)
+
+house_rec <- 
+  recipe(SalePrice ~ ., data = train_data) %>% 
+  update_role(Id, new_role = "ID") %>% 
+  step_log(LotArea, base = 10) %>% 
+  step_mutate(TotalBath = FullBath+0.5*HalfBath) %>% 
+  step_rm(FullBath, HalfBath) %>% 
+  step_dummy(all_nominal(), -all_outcomes()) %>% 
+  step_zv(all_predictors()) %>% 
+  step_normalize(all_numeric(), -all_outcomes())
+```
+
+
+## Additional Definitions
+
+There are a few more arguments we need to set before we begin:
+
+\pause
+
+- First, we create 10-fold cross-validation folds and specify our metric of interest
+
+\small
+
+```{r echo = T}
+folds <- vfold_cv(train_data, v = 10)
+metric <- metric_set(rmse)
+```
+
+\pause
+
+\normalsize
+
+- The `stacks` package requires that we save validation set predictions and workflows from `tune_grid` and `fit_resamples` after each model has been made. 
+ 
+- The package provides the helper functions to set appropriate values in function arguments.
+
+\small
+
+\pause
+
+```{r echo = T}
+ctrl_grid <- control_stack_grid()
+ctrl_res <- control_stack_resamples()
+```
+
+
+## Candidate Models:
+
+- Let's build an ensemble from KNN, Linear Regression, LASSO, and a Random Forest.
+
+  \pause
+  
+ - Note that KNN and LASSO require us to tune hyperparameters.
+ 
+\pause
+
+- We'll also need to determine how to weight each individual model in our final ensemble:
+
+\vspace{10 em}
+
+## KNN Model
+
+- We begin with KNN
+
+\small
+
+```{r echo =T}
+knn_mod <- nearest_neighbor(
+    mode = "regression",
+    neighbors = tune("k")) %>%  
+  set_engine("kknn")
+```
+
+\pause
+
+\small
+
+- And then create a workflow:
+
+\small
+
+```{r echo = T}
+knn_wf<- workflow() %>% 
+  add_model(knn_mod) %>% 
+  add_recipe(house_rec)
+```
+
+\normalsize
+
+\pause
+
+- Now we tune and fit
+
+\small
+
+```{r echo =T, cache = T}
+knn_grid <- data.frame(k = 1+2*0:20)
+
+knn_fit<- knn_wf %>% tune_grid(
+  resamples = folds, 
+  metrics = metric,
+  grid = knn_grid, 
+  control = ctrl_grid)
+```
+
+## Linear Model
+
+- On to the linear model:
+
+\small
+
+```{r echo = T}
+lm_mod <- linear_reg() %>% set_engine("lm")
+```
+
+\pause
+
+\normalsize
+
+- Create the workflow
+
+\small
+
+```{r echo =T}
+lm_wf<-workflow() %>% 
+  add_model(lm_mod) %>% 
+  add_recipe(house_rec)
+```
+
+\pause
+
+\normalsize
+
+- And fit the model (no hyperparamters need to be tuned)
+
+\small
+
+```{r echo=T,cache = T}
+lm_fit <- lm_wf %>% 
+  fit_resamples(resamples = folds,
+                metrics = metric,
+                control = ctrl_res)
+```
+
+## LASSO
+Now, our LASSO mod:
+
+\small
+
+```{r echo =T}
+lasso_mod <- linear_reg(
+    mode = "regression",
+    penalty = tune("lambda")) %>%  
+  set_engine("glmnet")
+```
+
+\pause
+
+\small
+
+- And then create a workflow:
+
+\small
+
+```{r echo = T}
+lasso_wf<- workflow() %>% 
+  add_model(lasso_mod) %>% 
+  add_recipe(house_rec)
+```
+
+\normalsize
+
+\pause
+
+- Now we tune and fit
+
+\small
+
+```{r echo =T, cache = T}
+lasso_grid <- data.frame(lambda = 10^seq(-2, 8, length = 50))
+
+lasso_fit<- lasso_wf %>% tune_grid(
+  resamples = folds, 
+  metrics = metric,
+  grid = lasso_grid, 
+  control = ctrl_grid)
+```
+
+## Random Forest
+
+- And finally our random forest
+
+\small
+
+```{r echo = T}
+rf_mod <- rand_forest(mode = "regression") %>%  
+  set_engine("randomForest")
+```
+
+\pause
+
+\normalsize
+
+- Create a workflow:
+
+\small
+
+```{r echo = T}
+rf_wf <- workflow() %>% 
+  add_model(rf_mod) %>% 
+  add_recipe(house_rec)
+```
+
+\pause
+
+\normalsize
+
+- And fit:
+
+\small
+
+```{r cache = T, echo = T}
+rf_fit <- rf_wf %>% 
+  fit_resamples(resamples = folds,
+                metrics = metric,
+                control = ctrl_res)
+```
+
+## Model Comparisons
+
+\tiny
+
+```{r echo =T,cache = T}
+show_best(knn_fit)
+show_best(lm_fit)
+show_best(lasso_fit)
+show_best(rf_fit)
+```
+
+## Assemble the stack
+
+- Initialize a data stack using `stacks()` and add models using `add_candidates()`
+ 
+\small
+```{r echo = T, cache = T}
+house_st <- stacks() %>% 
+  add_candidates(knn_fit) %>% 
+  add_candidates(lm_fit) %>% 
+  add_candidates(lasso_fit) %>% 
+  add_candidates(rf_fit)
+
+house_st
+```
+
+## View the results
+
+\tiny
+
+```{r echo = T}
+as_tibble(house_st)
+```
+
+## Fit the stack
+
+- We want our ensemble prediction to be a linear combination of the predictions from our candidate model. 
+
+  - How do find the coefficients for this lin. combo?
+  
+  \pause
+  
+  - LASSO! (implemented by the `blend_predictions()` function)
+  
+  \pause
+
+\small
+
+```{r echo=T, cache = T}
+stacks_grid <-  10^seq(-3, 6, length = 20)
+house_st_blend <- house_st %>% 
+  blend_predictions(penalty = stacks_grid, metric = metric)
+```
+
+\pause
+
+\normalsize
+
+- Which models did we keep?
+
+\small
+
+```{r echo = T}
+house_st_blend
+```
+
+## Plots
+
+How do results vary depending on LASSO penalty?
+
+\footnotesize
+
+```{r echo = T}
+theme_set(theme_bw())
+autoplot(house_st_blend)
+```
+
+## Fit Relevant Models
+
+- Now we fit candidates with non-zero stacking coefficients on the training set:
+
+\small
+\pause
+
+```{r echo = t, cache=T}
+house_en_fit<- house_st_blend %>% fit_members()
+```
+
+\normalsize
+
+\pause
+
+- And predict with new data
+
+\small
+
+```{r echo = T}
+house_preds<- test_data %>% bind_cols(predict(house_en_fit, .))
+```
+
+## Results
+
+- How did we do?
+
+\small
+
+```{r out.width="60%"}
+ggplot(house_preds, aes(x = SalePrice, y = .pred))+geom_point()+coord_obs_pred()
+```
+
+## Comparison
+
+- How does the ensemble compare to its constituents?
+
+\small
+
+```{r echo = T}
+member_preds <- house_preds %>% select(SalePrice) %>% 
+  bind_cols(predict(house_en_fit, test_data, members = T))
+
+map_dfr(member_preds, rmse, truth = SalePrice, data = member_preds) %>% 
+  mutate(member = colnames(member_preds))
+```
+
+
