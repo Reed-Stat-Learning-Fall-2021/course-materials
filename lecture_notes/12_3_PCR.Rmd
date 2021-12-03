@@ -1,0 +1,334 @@
+---
+title: "Principal Component Regression"
+author: "Nate Wells"
+date: "December 3rd, 2021"
+institute: "Math 243: Stat Learning"
+fontsize: 9pt
+output: 
+  beamer_presentation:
+    includes:
+      in_header: preamble.tex    
+graphics: yes    
+    
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = FALSE,
+	fig.align = "center",
+	message = FALSE,
+	warning = FALSE,
+	cache = F,
+	fig.width = 6,
+	fig.height = 4,
+	out.width = "70%"
+)
+library(tidyverse)
+library(knitr)
+```
+
+## Outline
+
+In today's class, we will...
+
+- Discuss Principal Component Analysis as a means of dimensionality reduction for regresion
+
+- Implement PCR in R
+
+
+# Principal Component Regression
+
+## Dimensionality Reduction
+
+Suppose you collect a sample of $n$ observations on $p$ predictors $X_1, \dots, X_p$, where $p$ is relatiely large. Suppose further that some of the predictors are correlated with one another. 
+
+\pause
+ 
+- Any predictive model for a response $Y$ based on all of the correlated variables will underperform due to instability in parameter estimates.
+
+\pause
+
+It may be difficult to fit complex models accurately, given limited number of observatiosn compared to predictors.
+
+\pause
+
+- If $p$ is larger than $n$, it may not be possible to fit certain models to the data (for example MLR models cannot be used)
+
+\pause
+
+One solution is to perform variable selection and drop some less useful predictors.
+
+\pause
+
+- But dropping variables completely loses possible valauable information.
+
+\pause
+
+- Instead, we can combine variables into new ones that adequately describe the variance in the data, and drop those that have limited utility in explaining that variance.
+
+## PCA Overview
+
+Consider the relationship between campaign ad spending and population size for 100 cities:
+
+```{r out.width = "45%"}
+set.seed(1)
+pop<-rnorm(100, 40, 10)
+x <- rnorm(100, 15, 5)
+
+ad<-.75*pop+ .65*x
+spending <- data.frame(x,pop,ad)
+
+ggplot(spending, aes( x = pop, y = ad))+geom_point()+theme_bw()+labs(x = "Population (ten thousands)", y = "Ad Spending (thousands of dollars)")+ coord_fixed()
+```
+
+\pause
+\normalsize
+What are the approximate standard deviations of ad spending and population?
+
+\pause
+
+\small
+
+```{r}
+spending %>% summarize(sd_Pop = sd(pop), sd_Ad = sd(ad))
+```
+
+ 
+
+
+
+
+## PCA Overview
+
+Consider the relationship between campaign ad spending and population size for 100 cities:
+
+```{r out.width = "45%"}
+set.seed(1)
+pop<-rnorm(100, 40, 10)
+x <- rnorm(100, 15, 5)
+
+ad<-.75*pop+ .65*x
+spending <- data.frame(x,pop,ad)
+
+ggplot(spending, aes( x = pop, y = ad))+geom_point()+theme_bw()+labs(x = "Population (ten thousands)", y = "Ad Spending (thousands of dollars)")+ coord_fixed()
+```
+
+ 
+
+\normalsize
+ 
+But how much of the variation in ad spending is just due to variation in population?
+
+\small
+\pause
+
+```{r}
+R_sq<-(cor(pop,ad))^2
+data.frame(R_sq)
+```
+
+
+
+## PCA Overview
+
+Can we find a line along which the observations vary the most?
+
+```{r}
+my_lm<-lm(ad ~ pop, data = spending)
+b0 <-  my_lm$coefficients[1]
+b1 <- my_lm$coefficients[2]
+```
+
+\pause
+
+```{r out.width = "45%"}
+ggplot(spending, aes( x = pop, y = ad))+geom_point()+theme_bw()+labs(x = "Population (ten thousands)", y = "Ad Spending (thousands of dollars)")+geom_smooth(method = "lm", se = F) + coord_fixed()
+```
+
+## PCA Overview 
+
+How much variation occurs perpendicular to this line?
+
+```{r out.width = "45%"}
+ggplot(spending, aes( x = pop, y = ad))+geom_point()+theme_bw()+labs(x = "Population (ten thousands)", y = "Ad Spending (thousands of dollars)")+geom_smooth(method = "lm", se = F)+geom_abline(slope = -1/b1, intercept = 94, color = "red", linetype = "dashed") + coord_fixed()
+```
+
+
+## PCA Definition
+
+The *first principal component* $Z_1$ is the direction along which there is the greatest variability in the data. 
+
+  \pause
+  
+  - That is, if we project the observations onto this line, the resulting projected observations would have the greatest possible variance.
+
+  \pause
+  
+  - Projecting a point onto a line amounts to finding the location on the line closest to the given point.
+  
+\pause
+
+We can express the first principal component as a linear combination of the centered predictors $X_i - \bar{X_i}$, where $\phi_{i1} \in \mathrm{R}$ and $\phi_{11}^2+ \dots + \phi_{p1}^2 = 1$:
+  
+\pause
+
+$$
+Z_1 = \phi_{11} (X_1 - \bar{X}_1) + \phi_{21}  (X_2 - \bar{X}_2) + \dots + \phi_{p1} (X_p - \bar{X}_p) 
+$$
+
+\pause
+
+- Alternatively, we could express $Z_1$ as an affine linear combination of the predictors themselves (affine meaning including a constant term)
+
+## PCA Example
+
+The first principal component
+
+
+```{r out.width = "45%"}
+ggplot(spending, aes( x = pop, y = ad))+geom_point()+theme_bw()+labs(x = "Population (ten thousands)", y = "Ad Spending (thousands of dollars)")+geom_smooth(method = "lm", se = F) + coord_fixed()+geom_point(x = 41.089, y = 40.444, color = "red", size = 2)
+
+```
+
+
+$$
+Z_1 = 0.8 (\textrm{Pop} - 41.1 )  + 0.6 (\textrm{Ad} - 40.4)
+$$
+
+## PCA Example
+
+What is leftover?
+
+
+```{r out.width = "75%"}
+spending <- spending %>% mutate(res = .75*my_lm$residuals  ) %>% mutate(p1 = pop - 41)
+ggplot(spending, aes( x = p1, y = res))+geom_point()+theme_bw()+labs(x = "1st Principal Component", y = "Leftovers")+geom_smooth(method = "lm", se = F) + coord_fixed() 
+
+```
+
+
+
+## Other Principal Components
+
+In general, if we have $p$ predictors, we can compute $p$ distinct principal components: $Z_1, Z_2, \dots , Z_p$.
+
+\pause
+
+The second principal component $Z_2$ is a linear combination of the centered variables that is 
+
+  - uncorrelated with the first principal component
+  - has the largest variance subject to this constraint.
+
+\pause
+
+For the case when $p =2$, the 2nd principal component corresponds to the line perpendicular to the line for the 1st principal component.
+
+\pause
+
+Generally, the $k$th principal component is obtained by finding a linear combination of centered variables that is uncorrelated with all previous principal components, and has the largest variance subject to this constraint.
+
+
+## PCA Example
+
+The second principal component
+
+
+```{r out.width = "45%"}
+ggplot(spending, aes( x = pop, y = ad))+geom_point()+theme_bw()+labs(x = "Population (ten thousands)", y = "Ad Spending (thousands of dollars)")+geom_point(x = 41.089, y = 40.444, color = "red", size = 2)+geom_abline(slope = -1/b1, intercept = 95.25, color = "red", linetype = "dashed") + coord_fixed()+geom_smooth(method = "lm", se = F)
+
+```
+
+$$
+Z_2 = 0.6 (\textrm{Pop} - 41.1 )  - 0.8 (\textrm{Ad} - 40.4)
+$$
+
+## Principal Comoponent Regression
+
+The PCR approach to linear regression constructs the first $M$ principal components $Z_1, \dots, Z_M$ of a data set with $p$ predictors (so $M \leq p$), and then uses these as predictors in a linear regression model.
+
+  \pause
+  
+  - Goal: Use a small number of predictors which explain most of the variability in the data set, as well as their relationship to the response.
+
+\pause
+
+In general, PCR tends to produce linear models with higher accuracy than models fit with the original predictors. 
+
+```{r fig.height=3, fig.width=8, out.width="70%"}
+library(gridExtra)
+x <- seq(from = 0, to = 50, by = 5)
+y <- seq(from = 0, to = 100, by = 10)
+d<-data.frame(x,y)
+
+ 
+g1<-ggplot( d, aes(x = x, y= y))+theme_bw()+labs(x = "Number of Components", y = "Error", title = "Original")
+g2<-ggplot( d, aes(x = x, y= y))+theme_bw()+labs(x = "Number of Components", y = "Error", title = "PCA")
+grid.arrange(g1, g2, ncol=2)
+```
+
+## Principal Component Regression in R
+
+We can use the `pcr` function in the `pls` library to quickly perform PCR in R. 
+
+\pause
+
+The `Hitters` data set from the `ISLR` package contains `Salary` and 18 other predictors for 263 baseball players  
+
+```{r}
+library(ISLR)
+Hitters <- Hitters %>% drop_na()
+```
+
+\small
+
+```{r echo = T}
+set.seed(1)
+library(pls)
+my_pcr <- pcr( Salary ~ ., data = Hitters, scale = T, validation = "CV")
+```
+
+
+\pause
+
+- Setting `scale = T` standardizes each predictor
+
+- Setting `validation = "CV"` causes `pcr` to compute the 10-fold CV error for each value of $M$ (number of principal components used)
+
+
+## PCR Results
+\tiny
+
+```{r echo = T}
+summary(my_pcr)
+```
+\small
+
+\pause
+
+- Note: `pcr` reports RSE, so values need to be squared to get MSE. 
+
+
+## Validation Plot
+\small
+
+```{r echo = T, out.width = "60%"}
+validationplot(my_pcr, val.type = "MSEP")
+```
+
+\pause
+
+\normalsize
+
+- Note: The smallest CV error occurs at $M = 16$ (which is close to the maximum number of predictors $p = 19$.)
+
+\pause
+
+- However, a relatively low CV error is also obtained at $M = 6$, suggesting fewer components are sufficient
+
+## Comparative Performance
+
+Live coding. A .Rmd file will be available on course website after class
+ 
+
+ 

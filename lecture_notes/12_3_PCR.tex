@@ -1,0 +1,561 @@
+% Options for packages loaded elsewhere
+\PassOptionsToPackage{unicode}{hyperref}
+\PassOptionsToPackage{hyphens}{url}
+%
+\documentclass[
+  9pt,
+  ignorenonframetext,
+]{beamer}
+\title{Principal Component Regression}
+\author{Nate Wells}
+\date{December 3rd, 2021}
+\institute{Math 243: Stat Learning}
+
+\usepackage{pgfpages}
+\setbeamertemplate{caption}[numbered]
+\setbeamertemplate{caption label separator}{: }
+\setbeamercolor{caption name}{fg=normal text.fg}
+\beamertemplatenavigationsymbolsempty
+% Prevent slide breaks in the middle of a paragraph
+\widowpenalties 1 10000
+\raggedbottom
+\setbeamertemplate{part page}{
+  \centering
+  \begin{beamercolorbox}[sep=16pt,center]{part title}
+    \usebeamerfont{part title}\insertpart\par
+  \end{beamercolorbox}
+}
+\setbeamertemplate{section page}{
+  \centering
+  \begin{beamercolorbox}[sep=12pt,center]{part title}
+    \usebeamerfont{section title}\insertsection\par
+  \end{beamercolorbox}
+}
+\setbeamertemplate{subsection page}{
+  \centering
+  \begin{beamercolorbox}[sep=8pt,center]{part title}
+    \usebeamerfont{subsection title}\insertsubsection\par
+  \end{beamercolorbox}
+}
+\AtBeginPart{
+  \frame{\partpage}
+}
+\AtBeginSection{
+  \ifbibliography
+  \else
+    \frame{\sectionpage}
+  \fi
+}
+\AtBeginSubsection{
+  \frame{\subsectionpage}
+}
+\usepackage{amsmath,amssymb}
+\usepackage{lmodern}
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage{textcomp} % provide euro and other symbols
+\else % if luatex or xetex
+  \usepackage{unicode-math}
+  \defaultfontfeatures{Scale=MatchLowercase}
+  \defaultfontfeatures[\rmfamily]{Ligatures=TeX,Scale=1}
+\fi
+% Use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\IfFileExists{microtype.sty}{% use microtype if available
+  \usepackage[]{microtype}
+  \UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\makeatletter
+\@ifundefined{KOMAClassName}{% if non-KOMA class
+  \IfFileExists{parskip.sty}{%
+    \usepackage{parskip}
+  }{% else
+    \setlength{\parindent}{0pt}
+    \setlength{\parskip}{6pt plus 2pt minus 1pt}}
+}{% if KOMA class
+  \KOMAoptions{parskip=half}}
+\makeatother
+\usepackage{xcolor}
+\IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
+\IfFileExists{bookmark.sty}{\usepackage{bookmark}}{\usepackage{hyperref}}
+\hypersetup{
+  pdftitle={Principal Component Regression},
+  pdfauthor={Nate Wells},
+  hidelinks,
+  pdfcreator={LaTeX via pandoc}}
+\urlstyle{same} % disable monospaced font for URLs
+\newif\ifbibliography
+\usepackage{color}
+\usepackage{fancyvrb}
+\newcommand{\VerbBar}{|}
+\newcommand{\VERB}{\Verb[commandchars=\\\{\}]}
+\DefineVerbatimEnvironment{Highlighting}{Verbatim}{commandchars=\\\{\}}
+% Add ',fontsize=\small' for more characters per line
+\usepackage{framed}
+\definecolor{shadecolor}{RGB}{248,248,248}
+\newenvironment{Shaded}{\begin{snugshade}}{\end{snugshade}}
+\newcommand{\AlertTok}[1]{\textcolor[rgb]{0.94,0.16,0.16}{#1}}
+\newcommand{\AnnotationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\AttributeTok}[1]{\textcolor[rgb]{0.77,0.63,0.00}{#1}}
+\newcommand{\BaseNTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\BuiltInTok}[1]{#1}
+\newcommand{\CharTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\CommentTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textit{#1}}}
+\newcommand{\CommentVarTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\ConstantTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\ControlFlowTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\DataTypeTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{#1}}
+\newcommand{\DecValTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\DocumentationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\ErrorTok}[1]{\textcolor[rgb]{0.64,0.00,0.00}{\textbf{#1}}}
+\newcommand{\ExtensionTok}[1]{#1}
+\newcommand{\FloatTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\FunctionTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\ImportTok}[1]{#1}
+\newcommand{\InformationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\KeywordTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\NormalTok}[1]{#1}
+\newcommand{\OperatorTok}[1]{\textcolor[rgb]{0.81,0.36,0.00}{\textbf{#1}}}
+\newcommand{\OtherTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{#1}}
+\newcommand{\PreprocessorTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textit{#1}}}
+\newcommand{\RegionMarkerTok}[1]{#1}
+\newcommand{\SpecialCharTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\SpecialStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\StringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\VariableTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\VerbatimStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\WarningTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\usepackage{graphicx}
+\makeatletter
+\def\maxwidth{\ifdim\Gin@nat@width>\linewidth\linewidth\else\Gin@nat@width\fi}
+\def\maxheight{\ifdim\Gin@nat@height>\textheight\textheight\else\Gin@nat@height\fi}
+\makeatother
+% Scale images if necessary, so that they will not overflow the page
+% margins by default, and it is still possible to overwrite the defaults
+% using explicit options in \includegraphics[width, height, ...]{}
+\setkeys{Gin}{width=\maxwidth,height=\maxheight,keepaspectratio}
+% Set default figure placement to htbp
+\makeatletter
+\def\fps@figure{htbp}
+\makeatother
+\setlength{\emergencystretch}{3em} % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\setcounter{secnumdepth}{-\maxdimen} % remove section numbering
+\usetheme{Madrid}
+\useoutertheme{miniframes} % Alternatively: miniframes, infolines, split
+\useinnertheme{circles}
+
+\definecolor{ReedRed}{RGB}{167, 14, 22} %Reed Red (primary)
+%\definecolor{UOGreen}{RGB}{3, 105, 54} % UO Green (primary)
+
+\usecolortheme[named=ReedRed]{structure}
+%\usecolortheme[named=Mahogany]{structure} % Sample dvipsnames color
+
+
+%\usepackage[urw-garamond]{mathdesign}
+%\usepackage[T1]{fontenc}
+
+\makeatletter
+\g@addto@macro\normalsize{%
+    \setlength\belowdisplayskip{-0pt}
+}
+
+\newcommand{\columnsbegin}{\begin{columns}}
+\newcommand{\columnsend}{\end{columns}}
+\ifLuaTeX
+  \usepackage{selnolig}  % disable illegal ligatures
+\fi
+
+\begin{document}
+\frame{\titlepage}
+
+\begin{frame}{Outline}
+\protect\hypertarget{outline}{}
+In today's class, we will\ldots{}
+
+\begin{itemize}
+\item
+  Discuss Principal Component Analysis as a means of dimensionality
+  reduction for regresion
+\item
+  Implement PCR in R
+\end{itemize}
+\end{frame}
+
+\hypertarget{principal-component-regression}{%
+\section{Principal Component
+Regression}\label{principal-component-regression}}
+
+\begin{frame}{Dimensionality Reduction}
+\protect\hypertarget{dimensionality-reduction}{}
+Suppose you collect a sample of \(n\) observations on \(p\) predictors
+\(X_1, \dots, X_p\), where \(p\) is relatiely large. Suppose further
+that some of the predictors are correlated with one another.
+
+\pause
+
+\begin{itemize}
+\tightlist
+\item
+  Any predictive model for a response \(Y\) based on all of the
+  correlated variables will underperform due to instability in parameter
+  estimates.
+\end{itemize}
+
+\pause
+
+It may be difficult to fit complex models accurately, given limited
+number of observatiosn compared to predictors.
+
+\pause
+
+\begin{itemize}
+\tightlist
+\item
+  If \(p\) is larger than \(n\), it may not be possible to fit certain
+  models to the data (for example MLR models cannot be used)
+\end{itemize}
+
+\pause
+
+One solution is to perform variable selection and drop some less useful
+predictors.
+
+\pause
+
+\begin{itemize}
+\tightlist
+\item
+  But dropping variables completely loses possible valauable
+  information.
+\end{itemize}
+
+\pause
+
+\begin{itemize}
+\tightlist
+\item
+  Instead, we can combine variables into new ones that adequately
+  describe the variance in the data, and drop those that have limited
+  utility in explaining that variance.
+\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{PCA Overview}
+\protect\hypertarget{pca-overview}{}
+Consider the relationship between campaign ad spending and population
+size for 100 cities:
+
+\begin{center}\includegraphics[width=0.45\linewidth]{12_3_PCR_files/figure-beamer/unnamed-chunk-1-1} \end{center}
+
+\pause
+\normalsize
+
+What are the approximate standard deviations of ad spending and
+population?
+
+\pause
+
+\small
+
+\begin{verbatim}
+##     sd_Pop    sd_Ad
+## 1 8.981994 7.418227
+\end{verbatim}
+\end{frame}
+
+\begin{frame}[fragile]{PCA Overview}
+\protect\hypertarget{pca-overview-1}{}
+Consider the relationship between campaign ad spending and population
+size for 100 cities:
+
+\begin{center}\includegraphics[width=0.45\linewidth]{12_3_PCR_files/figure-beamer/unnamed-chunk-3-1} \end{center}
+
+\normalsize
+
+But how much of the variation in ad spending is just due to variation in
+population?
+
+\small
+\pause
+
+\begin{verbatim}
+##        R_sq
+## 1 0.8238886
+\end{verbatim}
+\end{frame}
+
+\begin{frame}{PCA Overview}
+\protect\hypertarget{pca-overview-2}{}
+Can we find a line along which the observations vary the most?
+
+\pause
+
+\begin{center}\includegraphics[width=0.45\linewidth]{12_3_PCR_files/figure-beamer/unnamed-chunk-6-1} \end{center}
+\end{frame}
+
+\begin{frame}{PCA Overview}
+\protect\hypertarget{pca-overview-3}{}
+How much variation occurs perpendicular to this line?
+
+\begin{center}\includegraphics[width=0.45\linewidth]{12_3_PCR_files/figure-beamer/unnamed-chunk-7-1} \end{center}
+\end{frame}
+
+\begin{frame}{PCA Definition}
+\protect\hypertarget{pca-definition}{}
+The \emph{first principal component} \(Z_1\) is the direction along
+which there is the greatest variability in the data.
+
+\pause
+
+\begin{itemize}
+\tightlist
+\item
+  That is, if we project the observations onto this line, the resulting
+  projected observations would have the greatest possible variance.
+\end{itemize}
+
+\pause
+
+\begin{itemize}
+\tightlist
+\item
+  Projecting a point onto a line amounts to finding the location on the
+  line closest to the given point.
+\end{itemize}
+
+\pause
+
+We can express the first principal component as a linear combination of
+the centered predictors \(X_i - \bar{X_i}\), where
+\(\phi_{i1} \in \mathrm{R}\) and
+\(\phi_{11}^2+ \dots + \phi_{p1}^2 = 1\):
+
+\pause
+
+\[
+Z_1 = \phi_{11} (X_1 - \bar{X}_1) + \phi_{21}  (X_2 - \bar{X}_2) + \dots + \phi_{p1} (X_p - \bar{X}_p) 
+\]
+
+\pause
+
+\begin{itemize}
+\tightlist
+\item
+  Alternatively, we could express \(Z_1\) as an affine linear
+  combination of the predictors themselves (affine meaning including a
+  constant term)
+\end{itemize}
+\end{frame}
+
+\begin{frame}{PCA Example}
+\protect\hypertarget{pca-example}{}
+The first principal component
+
+\begin{center}\includegraphics[width=0.45\linewidth]{12_3_PCR_files/figure-beamer/unnamed-chunk-8-1} \end{center}
+
+\[
+Z_1 = 0.8 (\textrm{Pop} - 41.1 )  + 0.6 (\textrm{Ad} - 40.4)
+\]
+\end{frame}
+
+\begin{frame}{PCA Example}
+\protect\hypertarget{pca-example-1}{}
+What is leftover?
+
+\begin{center}\includegraphics[width=0.75\linewidth]{12_3_PCR_files/figure-beamer/unnamed-chunk-9-1} \end{center}
+\end{frame}
+
+\begin{frame}{Other Principal Components}
+\protect\hypertarget{other-principal-components}{}
+In general, if we have \(p\) predictors, we can compute \(p\) distinct
+principal components: \(Z_1, Z_2, \dots , Z_p\).
+
+\pause
+
+The second principal component \(Z_2\) is a linear combination of the
+centered variables that is
+
+\begin{itemize}
+\tightlist
+\item
+  uncorrelated with the first principal component
+\item
+  has the largest variance subject to this constraint.
+\end{itemize}
+
+\pause
+
+For the case when \(p =2\), the 2nd principal component corresponds to
+the line perpendicular to the line for the 1st principal component.
+
+\pause
+
+Generally, the \(k\)th principal component is obtained by finding a
+linear combination of centered variables that is uncorrelated with all
+previous principal components, and has the largest variance subject to
+this constraint.
+\end{frame}
+
+\begin{frame}{PCA Example}
+\protect\hypertarget{pca-example-2}{}
+The second principal component
+
+\begin{center}\includegraphics[width=0.45\linewidth]{12_3_PCR_files/figure-beamer/unnamed-chunk-10-1} \end{center}
+
+\[
+Z_2 = 0.6 (\textrm{Pop} - 41.1 )  - 0.8 (\textrm{Ad} - 40.4)
+\]
+\end{frame}
+
+\begin{frame}{Principal Comoponent Regression}
+\protect\hypertarget{principal-comoponent-regression}{}
+The PCR approach to linear regression constructs the first \(M\)
+principal components \(Z_1, \dots, Z_M\) of a data set with \(p\)
+predictors (so \(M \leq p\)), and then uses these as predictors in a
+linear regression model.
+
+\pause
+
+\begin{itemize}
+\tightlist
+\item
+  Goal: Use a small number of predictors which explain most of the
+  variability in the data set, as well as their relationship to the
+  response.
+\end{itemize}
+
+\pause
+
+In general, PCR tends to produce linear models with higher accuracy than
+models fit with the original predictors.
+
+\begin{center}\includegraphics[width=0.7\linewidth]{12_3_PCR_files/figure-beamer/unnamed-chunk-11-1} \end{center}
+\end{frame}
+
+\begin{frame}[fragile]{Principal Component Regression in R}
+\protect\hypertarget{principal-component-regression-in-r}{}
+We can use the \texttt{pcr} function in the \texttt{pls} library to
+quickly perform PCR in R.
+
+\pause
+
+The \texttt{Hitters} data set from the \texttt{ISLR} package contains
+\texttt{Salary} and 18 other predictors for 263 baseball players
+
+\small
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{set.seed}\NormalTok{(}\DecValTok{1}\NormalTok{)}
+\FunctionTok{library}\NormalTok{(pls)}
+\NormalTok{my\_pcr }\OtherTok{\textless{}{-}} \FunctionTok{pcr}\NormalTok{( Salary }\SpecialCharTok{\textasciitilde{}}\NormalTok{ ., }\AttributeTok{data =}\NormalTok{ Hitters, }\AttributeTok{scale =}\NormalTok{ T, }\AttributeTok{validation =} \StringTok{"CV"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\pause
+
+\begin{itemize}
+\item
+  Setting \texttt{scale\ =\ T} standardizes each predictor
+\item
+  Setting \texttt{validation\ =\ "CV"} causes \texttt{pcr} to compute
+  the 10-fold CV error for each value of \(M\) (number of principal
+  components used)
+\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{PCR Results}
+\protect\hypertarget{pcr-results}{}
+\tiny
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{summary}\NormalTok{(my\_pcr)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## Data:    X dimension: 263 19 
+##  Y dimension: 263 1
+## Fit method: svdpc
+## Number of components considered: 19
+## 
+## VALIDATION: RMSEP
+## Cross-validated using 10 random segments.
+##        (Intercept)  1 comps  2 comps  3 comps  4 comps  5 comps  6 comps
+## CV             452    352.5    351.6    352.3    350.7    346.1    345.5
+## adjCV          452    352.1    351.2    351.8    350.1    345.5    344.6
+##        7 comps  8 comps  9 comps  10 comps  11 comps  12 comps  13 comps
+## CV       345.4    348.5    350.4     353.2     354.5     357.5     360.3
+## adjCV    344.5    347.5    349.3     351.8     353.0     355.8     358.5
+##        14 comps  15 comps  16 comps  17 comps  18 comps  19 comps
+## CV        352.4     354.3     345.6     346.7     346.6     349.4
+## adjCV     350.2     352.3     343.6     344.5     344.3     346.9
+## 
+## TRAINING: % variance explained
+##         1 comps  2 comps  3 comps  4 comps  5 comps  6 comps  7 comps  8 comps
+## X         38.31    60.16    70.84    79.03    84.29    88.63    92.26    94.96
+## Salary    40.63    41.58    42.17    43.22    44.90    46.48    46.69    46.75
+##         9 comps  10 comps  11 comps  12 comps  13 comps  14 comps  15 comps
+## X         96.28     97.26     97.98     98.65     99.15     99.47     99.75
+## Salary    46.86     47.76     47.82     47.85     48.10     50.40     50.55
+##         16 comps  17 comps  18 comps  19 comps
+## X          99.89     99.97     99.99    100.00
+## Salary     53.01     53.85     54.61     54.61
+\end{verbatim}
+
+\small
+
+\pause
+
+\begin{itemize}
+\tightlist
+\item
+  Note: \texttt{pcr} reports RSE, so values need to be squared to get
+  MSE.
+\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Validation Plot}
+\protect\hypertarget{validation-plot}{}
+\small
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{validationplot}\NormalTok{(my\_pcr, }\AttributeTok{val.type =} \StringTok{"MSEP"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{center}\includegraphics[width=0.6\linewidth]{12_3_PCR_files/figure-beamer/unnamed-chunk-15-1} \end{center}
+
+\pause
+
+\normalsize
+
+\begin{itemize}
+\tightlist
+\item
+  Note: The smallest CV error occurs at \(M = 16\) (which is close to
+  the maximum number of predictors \(p = 19\).)
+\end{itemize}
+
+\pause
+
+\begin{itemize}
+\tightlist
+\item
+  However, a relatively low CV error is also obtained at \(M = 6\),
+  suggesting fewer components are sufficient
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Comparative Performance}
+\protect\hypertarget{comparative-performance}{}
+Live coding. A .Rmd file will be available on course website after class
+\end{frame}
+
+\end{document}
