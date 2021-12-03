@@ -32,7 +32,7 @@ library(knitr)
 
 In today's class, we will...
 
-- Discuss Principal Component Analysis as a means of dimensionality reduction for regresion
+- Discuss Principal Component Analysis as a means of dimensionality reduction for regression
 
 - Implement PCR in R
 
@@ -41,7 +41,7 @@ In today's class, we will...
 
 ## Dimensionality Reduction
 
-Suppose you collect a sample of $n$ observations on $p$ predictors $X_1, \dots, X_p$, where $p$ is relatiely large. Suppose further that some of the predictors are correlated with one another. 
+Suppose you collect a sample of $n$ observations on $p$ predictors $X_1, \dots, X_p$, where $p$ is relatively large. Suppose further that some of the predictors are correlated with one another. 
 
 \pause
  
@@ -61,7 +61,7 @@ One solution is to perform variable selection and drop some less useful predicto
 
 \pause
 
-- But dropping variables completely loses possible valauable information.
+- But dropping variables completely loses possible valuable information.
 
 \pause
 
@@ -69,29 +69,30 @@ One solution is to perform variable selection and drop some less useful predicto
 
 ## PCA Overview
 
-Consider the relationship between campaign ad spending and population size for 100 cities:
+Consider the weight and belly circumference for a random sample of 100 toddlers. 
 
 ```{r out.width = "45%"}
 set.seed(1)
-pop<-rnorm(100, 40, 10)
-x <- rnorm(100, 15, 5)
+n=100
+x<-rnorm(n,24,1)
+y<-rnorm(n,-1,1)
+Weight<-x
+Belly<-.75*x+0.75*y+2.5
 
-ad<-.75*pop+ .65*x
-spending <- data.frame(x,pop,ad)
-
-ggplot(spending, aes( x = pop, y = ad))+geom_point()+theme_bw()+labs(x = "Population (ten thousands)", y = "Ad Spending (thousands of dollars)")+ coord_fixed()
+d<-data.frame(Weight,Belly)
+ggplot(d, aes(x = Weight, y = Belly))+geom_point()+theme_bw()+labs(x = "Weight", y = "Belly", title = "Weight and Belly Circumference for 100 Toddlers")
 ```
 
 \pause
 \normalsize
-What are the approximate standard deviations of ad spending and population?
+What are the approximate standard deviations of `Weight` and `Belly`?
 
 \pause
 
 \small
 
 ```{r}
-spending %>% summarize(sd_Pop = sd(pop), sd_Ad = sd(ad))
+d %>% summarize(sd_Weight = sd(Weight), sd_Belly = sd(Belly))
 ```
 
  
@@ -101,30 +102,24 @@ spending %>% summarize(sd_Pop = sd(pop), sd_Ad = sd(ad))
 
 ## PCA Overview
 
-Consider the relationship between campaign ad spending and population size for 100 cities:
+Consider the weight and belly circumference for a random sample of 100 toddlers. 
 
-```{r out.width = "45%"}
+```{r echo=F, fig.height=4, fig.width=6, out.width="50%"}
 set.seed(1)
-pop<-rnorm(100, 40, 10)
-x <- rnorm(100, 15, 5)
-
-ad<-.75*pop+ .65*x
-spending <- data.frame(x,pop,ad)
-
-ggplot(spending, aes( x = pop, y = ad))+geom_point()+theme_bw()+labs(x = "Population (ten thousands)", y = "Ad Spending (thousands of dollars)")+ coord_fixed()
+ggplot(d, aes(x = Weight, y = Belly))+geom_point()+theme_bw()+labs(x = "Weight", y = "Belly", title = "Weight and Belly Circumference for 100 Toddlers")
 ```
 
  
 
 \normalsize
  
-But how much of the variation in ad spending is just due to variation in population?
+But how much of the variation in `Belly` circumference is just due to variation in `Weight`?
 
 \small
 \pause
 
 ```{r}
-R_sq<-(cor(pop,ad))^2
+R_sq<-(cor(Weight,Belly))^2
 data.frame(R_sq)
 ```
 
@@ -135,15 +130,20 @@ data.frame(R_sq)
 Can we find a line along which the observations vary the most?
 
 ```{r}
-my_lm<-lm(ad ~ pop, data = spending)
-b0 <-  my_lm$coefficients[1]
-b1 <- my_lm$coefficients[2]
+Weight_mean <- mean(Weight)
+Belly_mean <- mean(Belly)
+
+pca<-prcomp(d)
+phi1<-pca$rotation[1,1]
+phi2<-pca$rotation[2,1]
+b1 <- phi1/phi2
+b0 <-  Belly_mean - b1*Weight_mean
 ```
 
 \pause
 
 ```{r out.width = "45%"}
-ggplot(spending, aes( x = pop, y = ad))+geom_point()+theme_bw()+labs(x = "Population (ten thousands)", y = "Ad Spending (thousands of dollars)")+geom_smooth(method = "lm", se = F) + coord_fixed()
+ggplot(d, aes( x = Weight, y = Belly))+geom_point()+theme_bw()+labs(x = "Weight", y = "Belly") +coord_fixed()+geom_abline(intercept = b0, slope = b1, color = "blue", size = 1) 
 ```
 
 ## PCA Overview 
@@ -151,7 +151,7 @@ ggplot(spending, aes( x = pop, y = ad))+geom_point()+theme_bw()+labs(x = "Popula
 How much variation occurs perpendicular to this line?
 
 ```{r out.width = "45%"}
-ggplot(spending, aes( x = pop, y = ad))+geom_point()+theme_bw()+labs(x = "Population (ten thousands)", y = "Ad Spending (thousands of dollars)")+geom_smooth(method = "lm", se = F)+geom_abline(slope = -1/b1, intercept = 94, color = "red", linetype = "dashed") + coord_fixed()
+ggplot(d, aes( x = Weight, y = Belly))+geom_point()+theme_bw()+labs(x =  "Weight", y = "Belly")+geom_abline(intercept = b0, slope = b1, color = "blue", size = 1)+geom_abline(slope = -1/b1, intercept = Belly_mean + 1/b1*Weight_mean, color = "red", linetype = "dashed", size = 1) + coord_fixed()
 ```
 
 
@@ -186,15 +186,50 @@ $$
 The first principal component
 
 
+
+
+
 ```{r out.width = "45%"}
-ggplot(spending, aes( x = pop, y = ad))+geom_point()+theme_bw()+labs(x = "Population (ten thousands)", y = "Ad Spending (thousands of dollars)")+geom_smooth(method = "lm", se = F) + coord_fixed()+geom_point(x = 41.089, y = 40.444, color = "red", size = 2)
+ggplot(d, aes( x = Weight, y = Belly))+geom_point()+theme_bw()+labs(x =  "Weight", y = "Belly")+geom_abline(intercept = b0, slope = b1, color = "blue", size = 1) + coord_fixed()+geom_point(x = Weight_mean, y = Belly_mean, color = "red", size = 2)
 
 ```
 
 
 $$
-Z_1 = 0.8 (\textrm{Pop} - 41.1 )  + 0.6 (\textrm{Ad} - 40.4)
+Z_1 = 0.66 \cdot(\textrm{Weight} - 24.1 )  + 0.75\cdot (\textrm{Belly} - 19.8)
 $$
+
+## PCA Example
+
+What is leftover?
+
+```{r}
+a<- -b1
+b<- 1
+c<- -b0
+
+get_distance <- function(x0,y0, a,b,c){
+  (a*x0+b*y0+c)/sqrt(a^2 + b^2)
+}
+
+get_x <- function(x0,y0, a,b,c){
+  (b*(b*x0-a*y0)-a*c)/(a^2 +b^2)
+}
+
+get_y <- function(x0,y0, a,b,c){
+  (a*(-b*x0+a*y0)-b*c)/(a^2 +b^2)
+}
+```
+
+```{r out.width = "75%"}
+d <- d %>% mutate(z1_x = get_x(Weight, Belly,-b1, 1, -b0), z1_y = get_y(Weight,Belly,-b1, 1, -b0), pos = sqrt( (z1_x - Weight_mean)^2 + sqrt(z1_y - Belly_mean)^2), distance = get_distance(Weight, Belly, -b1, 1, -b0))
+
+ggplot(d)+geom_point(aes(x=Weight, y = Belly))+
+  geom_point(aes(x=z1_x, y = z1_y), color = "blue")+
+  geom_abline(intercept = b0, slope = b1)+theme_bw()+geom_segment(aes(x = Weight, y = Belly,xend = z1_x, yend = z1_y), linetype = "dashed")+coord_fixed()
+ 
+
+```
 
 ## PCA Example
 
@@ -202,12 +237,9 @@ What is leftover?
 
 
 ```{r out.width = "75%"}
-spending <- spending %>% mutate(res = .75*my_lm$residuals  ) %>% mutate(p1 = pop - 41)
-ggplot(spending, aes( x = p1, y = res))+geom_point()+theme_bw()+labs(x = "1st Principal Component", y = "Leftovers")+geom_smooth(method = "lm", se = F) + coord_fixed() 
+ggplot(d, aes( x = pos, y = distance))+geom_point()+theme_bw()+labs(x = "1st Principal Component", y = "Leftovers")+geom_abline(slope = 0, intercept = 0, color = "blue") + coord_fixed()+geom_point(aes(x = pos, y = 0), color = "blue")+geom_segment(aes(x = pos, xend = pos, y = distance, yend = 0), linetype = "dashed")
 
 ```
-
-
 
 ## Other Principal Components
 
@@ -235,12 +267,13 @@ The second principal component
 
 
 ```{r out.width = "45%"}
-ggplot(spending, aes( x = pop, y = ad))+geom_point()+theme_bw()+labs(x = "Population (ten thousands)", y = "Ad Spending (thousands of dollars)")+geom_point(x = 41.089, y = 40.444, color = "red", size = 2)+geom_abline(slope = -1/b1, intercept = 95.25, color = "red", linetype = "dashed") + coord_fixed()+geom_smooth(method = "lm", se = F)
-
+phi21<-pca$rotation[2,1]
+phi22<-pca$rotation[2,2]
+ggplot(d, aes( x = Weight, y = Belly))+geom_point()+theme_bw()+labs(x =  "Weight", y = "Belly")+geom_abline(intercept = b0, slope = b1, color = "blue", size = 1)+geom_abline(slope = -1/b1, intercept = Belly_mean + 1/b1*Weight_mean, color = "red", linetype = "dashed", size = 1) + coord_fixed()
 ```
 
 $$
-Z_2 = 0.6 (\textrm{Pop} - 41.1 )  - 0.8 (\textrm{Ad} - 40.4)
+Z_2 = 0.75\cdot (\textrm{Weight} - 24.1)  - 658 (\textrm{Belly} -  19.8)
 $$
 
 ## Principal Comoponent Regression
@@ -261,6 +294,7 @@ x <- seq(from = 0, to = 50, by = 5)
 y <- seq(from = 0, to = 100, by = 10)
 d<-data.frame(x,y)
 
+
  
 g1<-ggplot( d, aes(x = x, y= y))+theme_bw()+labs(x = "Number of Components", y = "Error", title = "Original")
 g2<-ggplot( d, aes(x = x, y= y))+theme_bw()+labs(x = "Number of Components", y = "Error", title = "PCA")
@@ -276,8 +310,13 @@ We can use the `pcr` function in the `pls` library to quickly perform PCR in R.
 The `Hitters` data set from the `ISLR` package contains `Salary` and 18 other predictors for 263 baseball players  
 
 ```{r}
+set.seed(13)
 library(ISLR)
+library(rsample)
 Hitters <- Hitters %>% drop_na()
+Hitters_split <- initial_split(Hitters)
+Hitters_train <- training(Hitters_split)
+Hitters_test <- testing(Hitters_split)
 ```
 
 \small
@@ -285,7 +324,7 @@ Hitters <- Hitters %>% drop_na()
 ```{r echo = T}
 set.seed(1)
 library(pls)
-my_pcr <- pcr( Salary ~ ., data = Hitters, scale = T, validation = "CV")
+my_pcr <- pcr( Salary ~ ., data = Hitters_train, scale = T, validation = "CV")
 ```
 
 
@@ -313,22 +352,36 @@ summary(my_pcr)
 \small
 
 ```{r echo = T, out.width = "60%"}
-validationplot(my_pcr, val.type = "MSEP")
+validationplot(my_pcr, val.type = "RMSEP", legendpos = "top")
 ```
 
 \pause
 
 \normalsize
 
-- Note: The smallest CV error occurs at $M = 16$ (which is close to the maximum number of predictors $p = 19$.)
+- Note: The smallest CV error occurs at $M = 17$ (which is close to the maximum number of predictors $p = 19$.)
 
 \pause
 
-- However, a relatively low CV error is also obtained at $M = 6$, suggesting fewer components are sufficient
+- However, a relatively low CV error is also obtained at $M =5$, suggesting fewer components are sufficient
 
-## Comparative Performance
 
-Live coding. A .Rmd file will be available on course website after class
- 
+## Make Predictions
+
+Finally, to actually implement the PCR model on training data, we use the `predict` function
+
+\footnotesize
+
+```{r echo = T}
+pcr_preds5 <- predict(my_pcr, Hitters_test, ncomp = 5)
+pcr_preds17 <- predict(my_pcr, Hitters_test, ncomp = 17)
+pcr_preds19 <- predict(my_pcr, Hitters_test, ncomp = 19)
+
+results <- data.frame(obs = Hitters_test$Salary, pcr_preds5, pcr_preds17,pcr_preds19) %>% 
+  pivot_longer(!obs, names_to = "model", values_to = "preds")
+
+library(yardstick)
+results %>% group_by(model) %>% rmse(truth = obs, estimate = preds ) %>% arrange(.estimate)
+```
 
  
