@@ -306,7 +306,28 @@ h. Compute the RMSE of each of your models from parts (c), (e), and (f) on the *
  
 ***********************************
 
+a. Lower fat content appear to have higher average absorptions, with the notable exception of the 47.8 percent fat sample, which had a moderate absorption.
 
+b. Each predictor is a particular frequency. From the graph above, we see that for a given sample, the absorptions of predictors at similiar frequencies are close, suggesting that the predicted fat contents for each are **highly** correlated. As a result, we should expect model coefficients to have high amounts of variability, especially because sample size is low.
+
+c. The Residual plot, Normal QQ plot, and Scale-Location plot show no evidence for concern. However, the leverage plot gives a very large number of points with high leverage. This is not surprising, given the strong evidence of multicolinearity observed in part (a).
+
+```{r}
+lin_mod_2 <- lm(fat~., data = ir_train)
+```
+
+```{r}
+library(gglm)
+gglm(lin_mod_2)
+```
+
+d. Performing best subset selection would require us to evaluate $2^{100} \approx 1.27 \times 10^{30}$ models, which is computationally infeasible. We instead use forward selection and backward selection (students can choose to do either).
+
+```{r cache = T}
+library(leaps)
+fs_mod<-regsubsets(fat ~., data = ir_train, nvmax = 100, method = "forward")
+bs_mod<-regsubsets(fat ~., data = ir_train, nvmax = 100, method = "backward")
+```
 
 
 
