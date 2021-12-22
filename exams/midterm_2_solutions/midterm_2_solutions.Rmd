@@ -323,12 +323,97 @@ gglm(lin_mod_2)
 
 d. Performing best subset selection would require us to evaluate $2^{100} \approx 1.27 \times 10^{30}$ models, which is computationally infeasible. We instead use forward selection and backward selection (students can choose to do either).
 
-```{r cache = T}
+```{r}
 library(leaps)
 fs_mod<-regsubsets(fat ~., data = ir_train, nvmax = 100, method = "forward")
 bs_mod<-regsubsets(fat ~., data = ir_train, nvmax = 100, method = "backward")
 ```
 
+
+e. To determine the optimal number of variables for each, we use the BIC metric and find BIC is minimized at $n = 25$ for FS and $n=46$ for BS.
+
+```{r fig.height=3, message=F}
+ 
+selection_metrics<- bind_cols(
+                         fs_bic=summary(fs_mod)$bic,
+                         bs_bic=summary(bs_mod)$bic,
+                         n_var=1:100
+) 
+
+selection_metrics <- selection_metrics %>% pivot_longer(!n_var,
+                                                        names_to = "metric",
+                                                        values_to = "value" )
+
+selection_metrics %>% 
+ggplot(   aes(x = n_var, y = value, color = metric))+geom_line()
+
+selection_metrics %>% filter(metric=="fs_bic") %>% arrange(value) %>% head()
+selection_metrics %>% filter(metric=="bs_bic") %>% arrange(value) %>% head()
+
+best_n_fs<-which.min(summary(fs_mod)$bic)
+best_n_bs<-which.min( summary(bs_mod)$bic)
+```
+
+```{r}
+fs_form<-get_model_formula(best_n_fs, fs_mod, "fat")
+b_form<-get_model_formula(best_n_bs, bs_mod, "fat")
+
+fs_mod<-lm(fs_form, data =  ir_train)
+bs_mod<-lm(get_model_formula(best_n_bs,bs_mod, "fat"), data = ir_train)
+```
+
+f. 
+
+```{r}
+x<-model.matrix(fat~., data = ir_train)
+y<-ir_train$fat
+
+xtst<-model.matrix(fat~., data = ir_test)
+ytst<-ir_test$fat
+```
+
+```{r}
+set.seed(10101)
+library(glmnet)
+
+grid<-10^(seq(-5,5,length = 100))
+rr_mod<-glmnet(x,y, family = "gaussian", alpha = 0 , lambda = grid)
+rr_cv<-cv.glmnet(x,y, alpha = 0 , lambda = grid)
+rr_l<-rr_cv$lambda.1se
+
+
+lasso_mod<-glmnet(x,y, family = "gaussian", alpha = 1, lambda = grid )
+lasso_cv<-cv.glmnet(x,y,alpha = 1, lambda = grid )
+lasso_l<-lasso_cv$lambda.1se
+
+data.frame(rr_l,lasso_l)
+```
+
+```{r out.width="80%"}
+plot(rr_mod)
+plot(rr_cv)
+
+plot(lasso_mod)
+plot(lasso_cv)
+```
+
+
+g. We observe that forward selection had the lowest test rMSE, followed closely by backward selection. LASSO and Ridge Regression had comparable test rMSE, while the full model performed worst by a significant margin. The best performing models all performed significant variable selection, which makes sense given the multicollinearity identified in the previous parts of this problem.
+
+```{r}
+results <- data.frame(
+  obs = ir_test$fat,
+  full = predict(lin_mod_2, ir_test),
+  ridge = as.numeric(predict.glmnet(rr_mod, newx = xtst, s = rr_l)),
+  lasso = as.numeric(predict.glmnet(lasso_mod, newx = xtst, s = lasso_l)),
+  forward = predict(fs_mod, ir_test),
+  backward = predict(bs_mod, ir_test)
+) %>% pivot_longer(!obs, names_to = "model", values_to = "preds")
+
+library(yardstick)
+
+results %>% group_by(model) %>% rmse(truth = obs, estimate = preds) %>% arrange(.estimate)
+```
 
 
 ***********************************
@@ -388,8 +473,79 @@ h. Use cross-validation to estimate the test error for the logistic regression m
 
 ***********************************
 
- 
+a. The formula for the probability in a logistic regression model is
+$$
+P(X) = \frac{e^{-5 +6X_1 + 5 X_2}}{1 + e^{-5 +6X_1 + 5 X_2} }
+$$
 
+b.
+
+c.
+
+```{r}
+get_probs <- function(X1, X2){
+  exp(-5 +6*X1 + 5*X2)/(1 + exp(-5 +6*X1 + 5*X2) )
+}
+
+sim_data <- sim_data %>% mutate(p = get_probs(x1, x2))
+
+ggplot(sim_data, aes(x = x1, y = x2, color = p))+geom_point()+theme_bw()+scale_colour_viridis_c(option = "plasma", end = .75)
+```
+
+d. 
+
+```{r}
+set.seed(10)
+sim_data <- sim_data %>% 
+rowwise() %>% #This allows you to mutate entries in the data frame one row at a time
+  mutate(Y = sample(0:1, size = 1, prob = c(1-p, p)))
+```
+
+e. A plausible decision boundary might have slope -1.2 and intercept of 1.1.
+
+```{r}
+ggplot(sim_data, aes(x = x1, y = x2, color = Y))+geom_point()+theme_bw()+scale_colour_viridis_c(option = "plasma", end = .75)+geom_abline(slope = -1.2, intercept = 1.1, color = "purple4")
+```
+
+
+f. The model coefficients are $\hat \beta_0 = -5.3$, $\hat \beta_1 = 6.7$ and $\hat \beta_2 = 4.3$. These are somewhat close to the original parameters.
+
+```{r}
+log_mod_3 <- glm(Y ~ x1 + x2, family = "binomial", data = sim_data)
+summary(log_mod_3)
+```
+
+g. The training error rate was 16%. This is probably a slight underestimate of the Bayes error rate.
+
+```{r}
+train_probs <- predict(log_mod_3, sim_data, type = "response")
+train_preds <- ifelse(train_probs > 0.5, "1", "0" )
+
+results_3 <- data.frame(obs = as.factor(sim_data$Y), preds = train_preds)
+
+results_3 %>% conf_mat(truth = obs, estimate = preds)
+results_3 %>% accuracy(truth = obs, estimate = preds)
+```
+
+h. Using 10-fold cross-validation, the estimated accuracy is 0.825, which is likely closer to the true Bayes error rate than the training error.
+
+```{r}
+set.seed(100)
+folds_10 <- vfold_cv(sim_data, v = 10)
+
+get_preds <- function(split){
+  mod <- glm(Y ~ x1 + x2, family = "binomial", data = analysis(split))
+  prob <- predict(mod, assessment(split), type = "response")
+  pred <- ifelse(prob > .5, "1", "0")
+  out <-  data.frame(Y =  assessment(split)$Y) %>% mutate(Y = factor(Y, levels = c("0", "1")))
+  out$pred <- factor(pred, levels = c("0", "1"))
+  out
+}
+
+folds_10$preds <- map(folds_10$splits, get_preds)
+
+folds_10$preds %>%  map_dfr(accuracy, Y, pred) %>% summarize(avg_acc = mean(.estimate))
+```
 
 
 ***********************************
