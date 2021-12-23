@@ -126,6 +126,15 @@ h. In the context of an email spam filter, which type of misclassification error
 
 *******************************************************
 
+a: 4
+b: 1
+c: 4
+d: 2
+e: 4
+f: 4
+g: 3
+h: 3
+
 a. 
 
 ```{r message = F, warning = F}
