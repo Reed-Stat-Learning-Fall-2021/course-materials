@@ -269,7 +269,7 @@ include_graphics("fat.png")
 
 If researchers can determine a predictive relationship between IR spectrum and fat content, then food scientists could predict a sample's fat content with IR instead of more expensive analytic chemistry.
 
-The following code chunk loads the `irdata`, which contains absorption values at 100 different frequencies, as well as fat content, for 215 meat samples. Additionally, it seperates the data into training and test sets.
+The following code chunk loads the `irdata`, which contains absorption values at 100 different frequencies, as well as fat content, for 215 meat samples. Additionally, it separates the data into training and test sets.
 
 ```{r message = F}
 irdata<-read_csv("irdata.csv")
@@ -281,15 +281,15 @@ ir_train <- training(ir_split)
 ir_test <- testing(ir_split)
 ```
 
-a. Based on the graphic shown above, what is the approximate relationship between the average absorption of a sample and its fat content? Are there any outliers to this trend?
+a. (2) Based on the graphic shown above, what is the approximate relationship between the average absorption of a sample and its fat content? Are there any outliers to this trend?
 
-b. The `irdata` contains 100 predictors (one for each IR frequency) on 215 observations. Based on the graphic above, do these predictors appear to be uncorrelated? (Think very carefully about how predictors are represented in this graph)  What influence do you think this may have on model accuracy, especially in light of the sample size?
+b. (2) The `irdata` contains 100 predictors (one for each IR frequency) on 215 observations. Based on the graphic above, do these predictors appear to be uncorrelated? (Think very carefully about how predictors are represented in this graph)  What influence do you think this may have on model accuracy, especially in light of the sample size?
 
-c. Fit a full linear model. Create and analyze the diagnostic plots for this model. 
+c. (5) Fit a full linear model. Create and analyze the diagnostic plots for this model. 
 
-d. Explain why it would be computationally infeasible to perform best subset selection. Instead, use either forward or backward selection to create an array of linear regression models. 
+d. (5) Explain why it would be computationally infeasible to perform best subset selection. Instead, use either forward or backward selection to create an array of linear regression models. 
 
-e. The `get_model_formula` function takes 3 arguments (a number of predictors, a `regsubsets` object, and the name of the response variable) and will extract the model formula for the best performing regression model of the given number of predictors in the `regsubsets` object.
+e. (2) The `get_model_formula` function takes 3 arguments (a number of predictors, a `regsubsets` object, and the name of the response variable) and will extract the model formula for the best performing regression model of the given number of predictors in the `regsubsets` object.
 
 ```{r}
 #Run this code to import the get_model_formula function
@@ -308,9 +308,9 @@ get_model_formula(3,my_mtmodels,"mpg")
 Based on your forward/backward selection process, choose an optimal subset of variables and fit the corresponding linear model. Be sure to use the `get_model_formula` helper function to assist creating the formula for your model.
 
 
-f. Perform either ridge regression or LASSO and use cross-validation to find the optimal regression penalty. Create a parameter path plot, along with a cross-validated error plot.
+f. (5) Perform either ridge regression or LASSO and use cross-validation to find the optimal regression penalty. Create a parameter path plot, along with a cross-validated error plot.
 
-h. Compute the RMSE of each of your models from parts (c), (e), and (f) on the **test** data. Which model has the best predictive accuracy? Which model has the worst? What traits do each of the best performing models have in common? Explain why this makes sense, based on your answer to part (b).
+h. (4) Compute the RMSE of each of your models from parts (c), (e), and (f) on the **test** data. Which model has the best predictive accuracy? Which model has the worst? What traits do each of the best performing models have in common? Explain why this makes sense, based on your answer to part (b).
 
  
 ***********************************
@@ -528,7 +528,7 @@ g. The training error rate was 16%. This is probably a slight underestimate of t
 
 ```{r}
 train_probs <- predict(log_mod_3, sim_data, type = "response")
-train_preds <- ifelse(train_probs > 0.5, "1", "0" )
+train_preds <- ifelse(train_probs > 0.5, "1", "0" ) %>% as.factor()
 
 results_3 <- data.frame(obs = as.factor(sim_data$Y), preds = train_preds)
 
