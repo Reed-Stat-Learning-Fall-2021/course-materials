@@ -441,13 +441,13 @@ sim_data<-data.frame(x1,x2) #Data frame of predictor values
 
 The goal of this problem is to simulate data from a logistic regression model with parameters $\beta_0 = -5$, $\beta_1 = 6$ and $\beta_2 = 5$. 
 
-a. Write the mathematical formula for the conditional probability function $p(X)$ for this model.
+a. (2) Write the mathematical formula for the conditional probability function $p(X)$ for this model.
 
-b. Write an R function which takes as input the values of the predictors `X1` and `X2` and outputs the conditional probability that $Y$ takes the value $1$, given those values. Plot the values of your probability function for the simulated data.
+b. (3) Write an R function which takes as input the values of the predictors `X1` and `X2` and outputs the conditional probability that $Y$ takes the value $1$, given those values. Plot the values of your probability function for the simulated data.
 
-c. Use `mutate` to add a column to your `sim_dat` data frame containing the conditional probability of $Y=1$ given the values of $X_1$ and $X_2$. 
+c. (2) Use `mutate` to add a column to your `sim_dat` data frame containing the conditional probability of $Y=1$ given the values of $X_1$ and $X_2$. 
 
-d. In this part, generate values of the response $Y$ using your conditional probabilities and add the results to the data frame `sim_data`. Use the following code as template to do so: 
+d. (3) In this part, generate values of the response $Y$ using your conditional probabilities and add the results to the data frame `sim_data`. Use the following code as template to do so: 
 
 ```{r}
 example_df<-data.frame(p = c(.2, .4, .6, .8)) #This creates a column of probabilities p
@@ -463,13 +463,13 @@ example_df
 ```
 
 
-e. Create a scatterplot of your simulated data, using color to denote the values of $Y$. Estimate a reasonable linear decision boundary (just based on inspection of the graph, no calculation necessary) and add it to the plot using `geom_abline`. 
+e. (3) Create a scatterplot of your simulated data, using color to denote the values of $Y$. Estimate a reasonable linear decision boundary (just based on inspection of the graph, no calculation necessary) and add it to the plot using `geom_abline`. 
 
-f. Fit a logistic regression model for $Y$ as a function of $X_1$ and $X_2$ based on `sim_data`. How do the coefficients of your fitted model compare to the original parameters $\beta_0 = -5$, $\beta_1 = 6$ and $\beta_2 = 5$?
+f. (5) Fit a logistic regression model for $Y$ as a function of $X_1$ and $X_2$ based on `sim_data`. How do the coefficients of your fitted model compare to the original parameters $\beta_0 = -5$, $\beta_1 = 6$ and $\beta_2 = 5$?
 
-g. Compute the training error rate on your simulated data. How do you think this compares to the theoretical Bayes classifier error rate?
+g. (3) Compute the training error rate on your simulated data. How do you think this compares to the theoretical Bayes classifier error rate?
 
-h. Use cross-validation to estimate the test error for the logistic regression model. How does this compare to your training error rate?
+h. (4) Use cross-validation to estimate the test error for the logistic regression model. How does this compare to your training error rate?
 
 
 ***********************************
