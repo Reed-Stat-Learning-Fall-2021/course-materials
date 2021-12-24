@@ -106,34 +106,26 @@ Below is a description of all variables that appear in the data set.
 - `number` Factor variable saying whether there was no number, a small number (under 1 million), or a big number.
 
 
-a. Choose 4 of the predictors above and create appropriate visualizations showing their individual distribution, as well as their relationship to the response `spam`. What are some trends demonstrated by the plots? Based on your preliminary analysis, which predictor do you think would be most helpful in classifying spam?
+a. (4) Choose 4 of the predictors above and create appropriate visualizations showing their individual distribution, as well as their relationship to the response `spam`. What are some trends demonstrated by the plots? Based on your preliminary analysis, which predictor do you think would be most helpful in classifying spam?
 
-b. Randomly divide the data into a training and test set using a 75-25 ratio. Be sure to set a seed to ensure reproducibility.
+b. (1) Randomly divide the data into a training and test set using a 75-25 ratio. Be sure to set a seed to ensure reproducibility.
 
-c. Fit a logistic regression model predicting `spam` as a function of other variables. Create a confusion matrix on test data, compute the test error rate, and create an ROC curve.
+c. (4) Fit a logistic regression model predicting `spam` as a function of other variables. Create a confusion matrix on test data, compute the test error rate, and create an ROC curve.
 
-d. Based on your findings in part (a), explain why neither a LDA nor a QDA model would be appropriate for this data.
+d. (2) Based on your findings in part (a), explain why neither a LDA nor a QDA model would be appropriate for this data.
 
-e. Fit a tuned KNN classification model predicting `spam` as a function of other variables. Create a confusion matrix on test data, compute the test error rate, and create an ROC curve.
+e. (4) Fit a tuned KNN classification model predicting `spam` as a function of other variables. Create a confusion matrix on test data, compute the test error rate, and create an ROC curve.
 
-f. Fit a pruned classification tree predicting `spam` as a function of other variables. Create a confusion matrix on test data, compute the test error rate, and create an ROC curve.
+f. (4) Fit a pruned classification tree predicting `spam` as a function of other variables. Create a confusion matrix on test data, compute the test error rate, and create an ROC curve.
 
-g. Compare the results of the previous steps. Which model had the highest accuracy? Did any models differ significantly in their sensitivity or specificity?
+g. (3) Compare the results of the previous steps. Which model had the highest accuracy? Did any models differ significantly in their sensitivity or specificity?
 
-h. In the context of an email spam filter, which type of misclassification error is worse: classifying a legitimate email as spam, or classifying a spam email as legitimate? Explain how you could modify one of the procedures in part (c), (e), or (f) to reduce this type of error.
+h. (3) In the context of an email spam filter, which type of misclassification error is worse: classifying a legitimate email as spam, or classifying a spam email as legitimate? Explain how you could modify one of the procedures in part (c), (e), or (f) to reduce this type of error.
 
 
 
 *******************************************************
 
-a: 4
-b: 1
-c: 4
-d: 2
-e: 4
-f: 4
-g: 3
-h: 3
 
 a. 
 
@@ -283,13 +275,13 @@ ir_test <- testing(ir_split)
 
 a. (2) Based on the graphic shown above, what is the approximate relationship between the average absorption of a sample and its fat content? Are there any outliers to this trend?
 
-b. (2) The `irdata` contains 100 predictors (one for each IR frequency) on 215 observations. Based on the graphic above, do these predictors appear to be uncorrelated? (Think very carefully about how predictors are represented in this graph)  What influence do you think this may have on model accuracy, especially in light of the sample size?
+b. (3) The `irdata` contains 100 predictors (one for each IR frequency) on 215 observations. Based on the graphic above, do these predictors appear to be uncorrelated? (Think very carefully about how predictors are represented in this graph)  What influence do you think this may have on model accuracy, especially in light of the sample size?
 
 c. (5) Fit a full linear model. Create and analyze the diagnostic plots for this model. 
 
-d. (5) Explain why it would be computationally infeasible to perform best subset selection. Instead, use either forward or backward selection to create an array of linear regression models. 
+d. (3) Explain why it would be computationally infeasible to perform best subset selection. Instead, use either forward or backward selection to create an array of linear regression models. 
 
-e. (2) The `get_model_formula` function takes 3 arguments (a number of predictors, a `regsubsets` object, and the name of the response variable) and will extract the model formula for the best performing regression model of the given number of predictors in the `regsubsets` object.
+e. (3) The `get_model_formula` function takes 3 arguments (a number of predictors, a `regsubsets` object, and the name of the response variable) and will extract the model formula for the best performing regression model of the given number of predictors in the `regsubsets` object.
 
 ```{r}
 #Run this code to import the get_model_formula function
