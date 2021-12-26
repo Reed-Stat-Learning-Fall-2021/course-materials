@@ -18,20 +18,21 @@ homework <- read_csv("Homework.csv")[1:18,]
 ```
 
 ```{r}
-gradebook <- inner_join(exams,slack, by = c("reed_id", "first_name", "last_name")) %>% inner_join(homework, by = c("reed_id", "first_name", "last_name")) %>% select(reed_id, first_name, last_name, Midterm_1_pct, Total, hw_pct)
+gradebook <- inner_join(exams,slack, by = c("reed_id", "first_name", "last_name")) %>% inner_join(homework, by = c("reed_id", "first_name", "last_name")) %>% select(reed_id, first_name, last_name, Midterm_1_pct, Midterm_2_pct, Total, hw_pct)
 ```
 
 ```{r}
-gradebook <- gradebook %>% rowwise() %>% mutate(participation = min(Total, 11)/11)
+gradebook <- gradebook %>% rowwise() %>% mutate(participation = min(Total, 26)/26)
+gradebook <- gradebook %>% mutate(midterm_total = (Midterm_1_pct + Midterm_2_pct)/2)
 ```
 
 ```{r}
 weight_names <-c("homework", "midterm", "participation") 
-weights  <- c(.5, .4, .1)
+weights  <- c(.6, .3, .1)
 ```
 
 ```{r}
-gradebook <- gradebook %>% mutate(score = hw_pct*weights[1] + Midterm_1_pct*weights[2]+ participation*weights[3])
+gradebook <- gradebook %>% mutate(score = hw_pct*weights[1] + midterm_total*weights[2]+ participation*weights[3])
 ```
 
 
