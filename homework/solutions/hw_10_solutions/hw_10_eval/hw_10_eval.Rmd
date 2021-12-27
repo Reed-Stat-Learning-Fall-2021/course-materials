@@ -77,6 +77,6 @@ results <-
 ```{r}
 library(yardstick)
 
-results %>% group_by(filename) %>% rmse(truth = Sale_Price, estimate = preds)
+results %>% group_by(filename) %>% rmse(truth = Sale_Price, estimate = preds) %>% arrange(.estimate)
 ```
 
